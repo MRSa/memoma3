@@ -9,7 +9,7 @@
 
 ## 2. レイヤ構成
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │  views / widgets  (UI 層)                                │
 │  MainCanvasScreen, ObjectListScreen, TopActionBar,       │
@@ -29,6 +29,7 @@
 ```
 
 ### 依存関係
+
 - `views` / `widgets` → `providers` / `services` / `models`
 - `providers` → `models` / `services`
 - `services` → `models`
@@ -38,7 +39,7 @@
 
 ### 3.1 エンティティ
 
-```
+```text
 CanvasState
 ├── objects: List<NoteObject>      # 描画順 = Z 順（末尾が最前面）
 ├── connections: List<Connection>  # オブジェクト間の接続線
@@ -51,7 +52,7 @@ CanvasState
 
 ### 3.2 NoteObject
 
-```
+```text
 NoteObject
 ├── id: String
 ├── position: Offset               # キャンバス座標
@@ -69,7 +70,7 @@ NoteObject
 
 ### 3.3 Connection
 
-```
+```text
 Connection
 ├── id: String
 ├── sourceId: String
@@ -81,7 +82,7 @@ Connection
 
 ### 3.4 GroupFrame
 
-```
+```text
 GroupFrame
 ├── id: String
 ├── memberIds: List<String>        # 含まれるオブジェクト ID
@@ -92,7 +93,7 @@ GroupFrame
 
 ### 3.5 BackgroundConfig
 
-```
+```text
 BackgroundConfig
 ├── gridType: GridType             # none / lines / dots
 ├── gridSpacing: double
@@ -130,7 +131,7 @@ BackgroundConfig
 | カテゴリ | メソッド |
 | --- | --- |
 | オブジェクト | `addObject`, `updatePosition`, `endDrag`, `setPosition`, `bringToFront`, `editObject`, `deleteObject`, `deleteSelected`, `deleteAllObjects`, `makeNewNote` |
-| 選択 | `selectObject`, `toggleSelect`, `_setAllSelected` |
+| 選択 | `selectObject`, `toggleSelect`, `selectAll`, `clearSelection`, `_setAllSelected` |
 | 整列 | `alignSelectedToStep`, `alignSelected` |
 | 接続線 | `addConnection`, `connectSelected`, `updateConnection`, `deleteConnection` |
 | グループ | `createGroup`, `addToGroup`, `updateGroup`, `deleteGroup`, `moveGroup`, `endGroupDrag`, `resetGroupDrafts` |

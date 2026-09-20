@@ -59,6 +59,10 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen> with Single
   /// 別のオブジェクトへ接続線を引く。
   bool _connectionMode = false;
 
+  /// 選択モード中かどうか。true のとき、オブジェクトをタップすると
+  /// 選択がトグルされ、複数選択できる（キーボードのない環境向け）。
+  bool _selectionMode = false;
+
   /// デバッグモード中かどうか。true のとき、右下パネルに
   /// カーソル・タップ・表示範囲の座標情報を表示する。
   bool _debugMode = false;
@@ -185,6 +189,28 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen> with Single
     setState(() {
       _connectionMode = !_connectionMode;
       _selectedConnectionId = null;
+      // 接続モードと選択モードは排他。接続モード中は選択モードを解除する。
+      if (_connectionMode) _selectionMode = false;
+    });
+  }
+
+  /// 選択モードをトグルする。
+  ///
+  /// 選択モード中は、オブジェクトをタップすると選択がトグルされ、
+  /// キーボードのない環境（Android 等）でも複数選択できる。
+  /// 選択モードを終了するときは、選択状態は保持する（「完了」で終了）。
+  void _toggleSelectionMode() {
+    setState(() {
+      _selectionMode = !_selectionMode;
+      // 選択モードと接続モードは排他。選択モード中は接続モードを解除する。
+      if (_selectionMode) _connectionMode = false;
+    });
+  }
+
+  /// 選択モードを終了する（選択状態は保持）。
+  void _exitSelectionMode() {
+    setState(() {
+      _selectionMode = false;
     });
   }
 
@@ -373,6 +399,9 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen> with Single
             storageService: _storageService,
             onConnectionModeToggle: _toggleConnectionMode,
             connectionMode: _connectionMode,
+            onSelectionModeToggle: _toggleSelectionMode,
+            selectionMode: _selectionMode,
+            onSelectionDone: _exitSelectionMode,
           ),
         ),
       ),
@@ -507,11 +536,19 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen> with Single
                                 _showConnectionMenu(context, connection, details.globalPosition);
                                 return;
                               }
+                              // 選択モード：空き領域タップで全選択を解除する。
+                              if (_selectionMode) {
+                                ref.read(canvasNotifierProvider.notifier).clearSelection();
+                              }
                             },
                             onDoubleTapDown: (details) {
+                              // 選択モード中は新規作成しない（誤操作防止）。
+                              if (_selectionMode) return;
                               _addNoteAt(details.globalPosition);
                             },
                             onLongPressStart: (details) {
+                              // 選択モード中は新規作成しない（誤操作防止）。
+                              if (_selectionMode) return;
                               _addNoteAt(details.globalPosition);
                             },
                           ),
@@ -563,6 +600,7 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen> with Single
                             note: note,
                             transformationController: _transformationController,
                             connectionMode: _connectionMode,
+                            selectionMode: _selectionMode,
                             onConnectionDrag: (dragEnd) {
                               if (!mounted) return;
                               _onConnectionDrag(note.id, dragEnd);

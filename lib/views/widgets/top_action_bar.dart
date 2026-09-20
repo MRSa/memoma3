@@ -19,11 +19,21 @@ class TopActionBar extends ConsumerWidget {
   final VoidCallback? onConnectionModeToggle;
   final bool connectionMode;
 
+  /// 選択モードのトグル（キーボードのない環境向けの複数選択）。
+  final VoidCallback? onSelectionModeToggle;
+  final bool selectionMode;
+
+  /// 選択モードを終了する（選択状態は保持）。
+  final VoidCallback? onSelectionDone;
+
   const TopActionBar({
     super.key,
     required this.storageService,
     this.onConnectionModeToggle,
     this.connectionMode = false,
+    this.onSelectionModeToggle,
+    this.selectionMode = false,
+    this.onSelectionDone,
   });
 
   @override
@@ -38,6 +48,28 @@ class TopActionBar extends ConsumerWidget {
       padding: const EdgeInsets.all(8),
       child: Row(
         children: [
+          // ---------------------------------------------------------------
+          // [1] ファイル操作：読み込み / 保存 / 画像・PDF エクスポート
+          // ---------------------------------------------------------------
+          IconButton(
+            tooltip: '読み込み',
+            icon: const Icon(Icons.file_open),
+            onPressed: () => _onLoad(context, ref),
+          ),
+          IconButton(
+            tooltip: '保存',
+            icon: const Icon(Icons.save),
+            onPressed: () => _onSave(context, ref),
+          ),
+          IconButton(
+            tooltip: '画像/PDF エクスポート',
+            icon: const Icon(Icons.image_outlined),
+            onPressed: () => _onExportImage(context, ref),
+          ),
+          _divider(context),
+          // ---------------------------------------------------------------
+          // [2] 履歴：Undo / Redo
+          // ---------------------------------------------------------------
           IconButton(
             tooltip: 'Undo',
             icon: const Icon(Icons.undo),
@@ -48,32 +80,22 @@ class TopActionBar extends ConsumerWidget {
             icon: const Icon(Icons.redo),
             onPressed: state.redoStack.isEmpty ? null : () => notifier.redo(),
           ),
-          const SizedBox(width: 8),
-          IconButton(
-            tooltip: '保存',
-            icon: const Icon(Icons.save),
-            onPressed: () => _onSave(context, ref),
-          ),
-          IconButton(
-            tooltip: '読み込み',
-            icon: const Icon(Icons.open_in_new),
-            onPressed: () => _onLoad(context, ref),
-          ),
-          IconButton(
-            tooltip: '画像/PDF エクスポート',
-            icon: const Icon(Icons.image_outlined),
-            onPressed: () => _onExportImage(context, ref),
-          ),
-          const SizedBox(width: 16),
+          _divider(context),
+          // ---------------------------------------------------------------
+          // [3] 状態表示：オブジェクト数 / 操作数（Undo 件数）
+          // ---------------------------------------------------------------
           Text(
-            'オブジェクト: $itemCount',
+            'メモ: $itemCount',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(width: 16),
           Text(
-            'Undo: $undoCount',
+            '操作: $undoCount',
           ),
-          // キャンバス名（中央表示、タップで変更）。
+          _divider(context),
+          // ---------------------------------------------------------------
+          // [4] キャンバス名（中央表示、タップで変更）
+          // ---------------------------------------------------------------
           Expanded(
             child: Center(
               child: InkWell(
@@ -83,13 +105,6 @@ class TopActionBar extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // ----- 題名のアイコンがあったが、わけがわからんので外す
-                      //Icon(
-                      //  Icons.title,
-                      //  size: 18,
-                      //  color: Theme.of(context).colorScheme.primary,
-                      //),
-                      const SizedBox(width: 6),
                       Flexible(
                         child: Text(
                           canvasName,
@@ -112,6 +127,10 @@ class TopActionBar extends ConsumerWidget {
               ),
             ),
           ),
+          _divider(context),
+          // ---------------------------------------------------------------
+          // [5] 編集系：編集 / 整列 / グループ化 / 接続
+          // ---------------------------------------------------------------
           IconButton(
             tooltip: '編集',
             icon: const Icon(Icons.edit),
@@ -119,76 +138,6 @@ class TopActionBar extends ConsumerWidget {
                 ? null
                 : () => _onEdit(context, ref),
           ),
-          IconButton(
-            tooltip: '削除',
-            icon: const Icon(Icons.delete_outline),
-            onPressed: notifier.selectedCount == 0
-                ? null
-                : () => _confirmDelete(context, ref),
-          ),
-          IconButton(
-            tooltip: '全削除',
-            icon: const Icon(Icons.delete_sweep_outlined),
-            onPressed: itemCount == 0
-                ? null
-                : () => _confirmDeleteAll(context, ref),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            tooltip: '接続',
-            icon: const Icon(Icons.link),
-            onPressed: notifier.selectedCount < 2
-                ? null
-                : () {
-                    notifier.connectSelected();
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('接続しました')),
-                      );
-                    }
-                  },
-          ),
-          IconButton(
-            tooltip: 'グループ化',
-            icon: const Icon(Icons.dashboard),
-            onPressed: state.objects.any((o) => o.isSelected)
-                ? () => notifier.createGroup(
-                      state.objects
-                          .where((o) => o.isSelected)
-                          .map((o) => o.id)
-                          .toList(),
-                    )
-                : null,
-          ),
-          IconButton(
-            tooltip: '接続モード',
-            icon: const Icon(Icons.draw),
-            isSelected: connectionMode,
-            color: connectionMode ? Theme.of(context).colorScheme.primary : null,
-            onPressed: onConnectionModeToggle,
-          ),
-          const SizedBox(width: 8),
-          // ---------------------------------------------------------------
-          // オブジェクト一覧（DataTable 表示・CSV エクスポート）
-          // ---------------------------------------------------------------
-          IconButton(
-            tooltip: 'オブジェクト一覧',
-            icon: const Icon(Icons.table_rows),
-            onPressed: () => _onObjectList(context),
-          ),
-          // ---------------------------------------------------------------
-          // 背景ガイド設定
-          // ---------------------------------------------------------------
-          IconButton(
-            tooltip: '背景ガイド設定',
-            icon: const Icon(Icons.wallpaper),
-            onPressed: () => _onBackgroundSettings(context, ref),
-          ),
-          // ---------------------------------------------------------------
-          // オブジェクト整列
-          // 1 個選択：X/Y を 10 の倍数に整列。
-          // 複数選択：整列モード（左/右/上/下/等間隔）を選択するダイアログを表示。
-          // ---------------------------------------------------------------
           IconButton(
             tooltip: notifier.selectedCount > 1
                 ? '整列（左/右/上/下/等間隔）'
@@ -211,7 +160,115 @@ class TopActionBar extends ConsumerWidget {
                     }
                   },
           ),
+          IconButton(
+            tooltip: 'グループ化',
+            icon: const Icon(Icons.dashboard),
+            onPressed: state.objects.any((o) => o.isSelected)
+                ? () => notifier.createGroup(
+                      state.objects
+                          .where((o) => o.isSelected)
+                          .map((o) => o.id)
+                          .toList(),
+                    )
+                : null,
+          ),
+          IconButton(
+            tooltip: '接続',
+            icon: const Icon(Icons.link),
+            onPressed: notifier.selectedCount < 2
+                ? null
+                : () {
+                    notifier.connectSelected();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('接続しました')),
+                      );
+                    }
+                  },
+          ),
+          _divider(context),
+          // ---------------------------------------------------------------
+          // [6] 削除系：削除 / 全削除
+          // ---------------------------------------------------------------
+          IconButton(
+            tooltip: '削除',
+            icon: const Icon(Icons.delete_outline),
+            onPressed: notifier.selectedCount == 0
+                ? null
+                : () => _confirmDelete(context, ref),
+          ),
+          IconButton(
+            tooltip: '全削除',
+            icon: const Icon(Icons.delete_sweep_outlined),
+            onPressed: itemCount == 0
+                ? null
+                : () => _confirmDeleteAll(context, ref),
+          ),
+          _divider(context),
+          // ---------------------------------------------------------------
+          // [7] 構成系：接続モード / 選択モード / 全選択
+          // ---------------------------------------------------------------
+          IconButton(
+            tooltip: '接続モード',
+            icon: const Icon(Icons.draw),
+            style: _modeButtonStyle(connectionMode, context),
+            onPressed: onConnectionModeToggle,
+          ),
+          IconButton(
+            tooltip: '選択モード',
+            icon: const Icon(Icons.checklist_rtl_outlined),
+            style: _modeButtonStyle(selectionMode, context),
+            onPressed: onSelectionModeToggle,
+          ),
+          IconButton(
+            tooltip: '全選択',
+            icon: const Icon(Icons.select_all),
+            onPressed: (!selectionMode || state.objects.isEmpty)
+                ? null
+                : () => notifier.selectAll(),
+          ),
+          _divider(context),
+          // ---------------------------------------------------------------
+          // [8] 表示系：オブジェクト一覧 / 背景ガイド設定
+          // ---------------------------------------------------------------
+          IconButton(
+            tooltip: 'オブジェクト一覧',
+            icon: const Icon(Icons.table_rows),
+            onPressed: () => _onObjectList(context),
+          ),
+          IconButton(
+            tooltip: '背景ガイド設定',
+            icon: const Icon(Icons.settings),
+            onPressed: () => _onBackgroundSettings(context, ref),
+          ),
         ],
+      ),
+    );
+  }
+
+  /// 操作カテゴリの区切り線（縦線）を返す。
+  Widget _divider(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: VerticalDivider(
+        width: 1,
+        thickness: 1,
+        color: Theme.of(context).dividerColor,
+      ),
+    );
+  }
+
+  /// モード ON 時のボタンスタイル（枠線＋背景＋アイコン色）を返す。
+  /// [active] が false のときは null（既定スタイル）を返す。
+  ButtonStyle? _modeButtonStyle(bool active, BuildContext context) {
+    if (!active) return null;
+    final primary = Theme.of(context).colorScheme.primary;
+    return IconButton.styleFrom(
+      foregroundColor: primary,
+      backgroundColor: primary.withValues(alpha: 0.12),
+      side: BorderSide(color: primary, width: 2),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(6)),
       ),
     );
   }
