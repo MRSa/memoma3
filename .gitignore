@@ -13,6 +13,7 @@
 migrate_working_dir/
 cache.json
 pubspec.lock
+.metadata
 
 # IntelliJ related
 *.iml
