@@ -8,11 +8,11 @@
 | --- | --- |
 | OS | Windows |
 | Dart SDK | `^3.13.2` |
-| Flutter | `D:\APL\flutter\bin\flutter.bat`（PATH に登録されていない場合、フルパスで実行） |
-| Python（アイコン生成用） | `C:/Users/mrsa_/AppData/Local/Programs/Python/Python314/python.exe`（Python 3.14.x） |
+| Flutter | `flutter.bat`（PATH に登録されていない場合、フルパスで実行） |
+| Python（アイコン生成用） | `Spython.exe`（Python 3.14.x） |
 | 依存管理 | `pub`（`pubspec.yaml`） |
 
-> **注意**: `flutter.bat` は PATH に登録されていない場合があります。その場合は `D:\APL\flutter\bin\flutter.bat` のフルパスで実行してください。
+> **注意**: `flutter.bat` は PATH に登録されていない場合があります。その場合はフルパスで実行してください。
 
 ## 2. ファイル構造
 
@@ -115,13 +115,13 @@ memoma3/
 ### 4.1 依存パッケージの取得
 
 ```powershell
-D:\APL\flutter\bin\flutter.bat pub get
+flutter.bat pub get
 ```
 
 ### 4.2 静的解析（Lint）
 
 ```powershell
-D:\APL\flutter\bin\flutter.bat analyze
+flutter.bat analyze
 ```
 
 - 正常時は `No issues found!` が表示されます。
@@ -129,30 +129,30 @@ D:\APL\flutter\bin\flutter.bat analyze
 ### 4.3 テスト
 
 ```powershell
-D:\APL\flutter\bin\flutter.bat test
+flutter.bat test
 ```
 
 ### 4.4 実行（開発）
 
 ```powershell
 # Windows デスクトップ
-D:\APL\flutter\bin\flutter.bat run -d windows
+flutter.bat run -d windows
 
 # Web（Chrome）
-D:\APL\flutter\bin\flutter.bat run -d chrome
+flutter.bat run -d chrome
 ```
 
 ### 4.5 本番ビルド
 
 ```powershell
 # Windows
-D:\APL\flutter\bin\flutter.bat build windows
+flutter.bat build windows
 
 # Web
-D:\APL\flutter\bin\flutter.bat build web
+flutter.bat build web
 
 # Android（APK）
-D:\APL\flutter\bin\flutter.bat build apk
+flutter.bat build apk
 ```
 
 ## 5. アイコンの再生成
@@ -167,7 +167,7 @@ D:\APL\flutter\bin\flutter.bat build apk
 ### 5.2 実行
 
 ```powershell
-C:/Users/mrsa_/AppData/Local/Programs/Python/Python314/python.exe tools/convert_icon.py
+spython.exe tools/convert_icon.py
 ```
 
 ### 5.3 生成物
@@ -186,7 +186,7 @@ C:/Users/mrsa_/AppData/Local/Programs/Python/Python314/python.exe tools/convert_
 
 ## 6. 開発時の注意事項
 
-- **Flutter のフルパス**: `flutter.bat` が PATH にない場合は、`D:\APL\flutter\bin\flutter.bat` を使用してください。
+- **Flutter のフルパス**: `flutter.bat` が PATH にない場合は、インストールした絶対パスを使用してください。
 - **ターミナルの一時的なエラー**: `flutter.bat` や PowerShell コマンドが「CommandNotFoundException」を一時的に返すことがあります。その場合は再実行してください。
 - **SVG → PNG 変換**: `cairosvg` や `svglib` は Windows でネイティブライブラリ（cairo / rlPyCairo）を必要とするため失敗します。`tools/convert_icon.py` はヘッドレスブラウザ（Chrome / Edge）のスクリーンショット方式で変換します。
 - **Lint**: コード変更後は必ず `flutter analyze` を実行し、`No issues found!` を確認してください。
