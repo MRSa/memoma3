@@ -373,6 +373,36 @@ class CanvasNotifier extends Notifier<CanvasState> {
     );
   }
 
+  /// 全オブジェクトを選択する（選択モードの「全選択」用）。
+  void selectAll() {
+    if (state.objects.isEmpty) return;
+    final updated = state.objects.map((o) => o.copyWith(isSelected: true)).toList();
+    state = CanvasState(
+      objects: updated,
+      connections: state.connections,
+      groupFrames: state.groupFrames,
+      selectedId: state.objects.last.id,
+      history: state.history,
+      redoStack: state.redoStack,
+      maxHistory: state.maxHistory,
+    );
+  }
+
+  /// 全選択を解除する（選択モードの「完了」・空き領域タップ用）。
+  void clearSelection() {
+    if (selectedCount == 0) return;
+    final updated = state.objects.map((o) => o.copyWith(isSelected: false)).toList();
+    state = CanvasState(
+      objects: updated,
+      connections: state.connections,
+      groupFrames: state.groupFrames,
+      selectedId: null,
+      history: state.history,
+      redoStack: state.redoStack,
+      maxHistory: state.maxHistory,
+    );
+  }
+
   /// 選択中のオブジェクトの情報を編集する。
   ///
   /// [id] のオブジェクトの shape / label / detail / color / labelColor を

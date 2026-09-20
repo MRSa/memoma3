@@ -16,7 +16,7 @@
 
 ## 2. ファイル構造
 
-```
+```text
 memoma3/
 ├── pubspec.yaml                  # 依存パッケージ・アセット定義
 ├── analysis_options.yaml         # Lint 設定（flutter_lints）
@@ -160,6 +160,7 @@ flutter.bat build apk
 アプリアイコンは `images/memoma3_icon.svg` をソースとして、`tools/convert_icon.py` で生成します。
 
 ### 5.1 前提
+
 - Python 3.14.x
 - `Pillow`（`pip install Pillow`）
 - Chrome または Edge（ヘッドレスレンダリング用）

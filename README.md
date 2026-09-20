@@ -4,13 +4,14 @@
 
 - **開発言語**: Flutter (Dart)
 - **状態管理**: Riverpod (3.x)
-- **対応プラットフォーム**: Windows / Web / Android
+- **対応プラットフォーム**: Windows / Web / Android / Linux
 - **ファイル入出力**: `file_picker`（クロスプラットフォーム対応）
 - **オブジェクト編集**: 14 形状・強調レベル・ラベル・本文・説明・本体色・ラベル色・説明色の編集に対応
 - **カラーピッカー**: `flex_color_picker` を使用した柔軟な色選択に対応
 - **接続線**: 2 つのオブジェクトを線でつなぐ（線種 4 種・形状 6 種・色設定・接続解除）
 - **グループ化**: 複数のオブジェクトを囲むグループ枠（名称・説明・枠線の色・枠ごと移動）
 - **整列**: 1 個選択で X/Y を 10 の倍数に、複数選択で左/右/上/下/等間隔（横幅・縦幅）
+- **選択モード**: キーボードのない環境（Android 等）向けの複数選択（タップで選択トグル・全選択）
 - **Undo / Redo**: 最大 30 件まで戻す・やり直す
 - **画像 / PDF エクスポート**: キャンバスを PNG / PDF に書き出し
 - **オブジェクト一覧**: 全オブジェクトの属性を表示・フィルタ・ソートし、CSV エクスポート
@@ -76,6 +77,20 @@
 | **再タップ（同じオブジェクト）** | 選択を解除 |
 | **Ctrl + タップ** | そのオブジェクトの選択をトグル（追加/解除）。他の選択は維持（複数選択） |
 | **ドラッグ開始** | 全選択を解除し、ドラッグしたオブジェクトのみを選択（単一選択） |
+
+#### 選択モード（キーボードのない環境向け）
+
+キーボードが接続されていない環境（Android 等）では Ctrl+タップが使えないため、上部アクションバーの「選択モード」ボタンで選択モードを有効にすると、タップのみで複数選択できます。
+
+| 操作 | 結果 |
+| --- | --- |
+| 「選択モード」ボタン | 選択モードを有効/無効に切替（接続モードと排他） |
+| オブジェクトをタップ | そのオブジェクトの選択をトグル（追加/解除）。他の選択は維持 |
+| 空き領域をタップ | 全選択を解除 |
+| 「全選択」ボタン | 全オブジェクトを選択（選択モード中かつオブジェクトがあるときのみ有効） |
+| 「選択モード」ボタン（再度） | 選択モードを終了（選択状態は保持） |
+
+選択モード中は、オブジェクトのドラッグ移動や空き領域のダブルタップ/長押しによる新規作成は行われません（誤操作防止）。
 
 #### 1つのオブジェクトを選択しているときの操作
 
@@ -286,7 +301,7 @@ lib/
 | `providers/canvas_provider.dart` | `CanvasNotifier` | オブジェクト・接続線・グループの CRUD、選択、整列、Undo/Redo、JSON 復元/エクスポートを管理。最後に設定された形状を保持し、新規オブジェクトのデフォルト形状として使用する。 |
 | `views/main_canvas_screen.dart` | `MainCanvasScreen` | `InteractiveViewer` を用いたメイン画面。ダブルタップ/長押しでオブジェクト追加。左下にズーム制御パネルを配置。 |
 | `views/object_list_screen.dart` | `ObjectListScreen` | オブジェクト一覧画面。フィルタ・ソート・中心移動・削除・CSV エクスポートを提供。 |
-| `views/widgets/note_object_widget.dart` | `NoteObjectWidget` | 1 オブジェクトの描画とドラッグ操作。ズーム補正付き移動。接続モード時は接続先の検出用に使用。長押しで編集ダイアログを表示。 |
+| `views/widgets/note_object_widget.dart` | `NoteObjectWidget` | 1 オブジェクトの描画とドラッグ操作。ズーム補正付き移動。接続モード時は接続先の検出用に使用。長押しで編集ダイアログを表示。選択モード時はタップで選択をトグル（複数選択）。 |
 | `views/widgets/note_shape_painter.dart` | `NoteShapePainter` | 形状（14 種）に応じた背景描画。選択時は四隅の枠線で強調。 |
 | `views/widgets/connection_painter.dart` | `ConnectionPainter` | 2 オブジェクト間を結ぶ接続線の描画。形状（6 種）と線種（4 種）・色に応じた描画。オブジェクトの境界間を結ぶパスを構築する。 |
 | `views/widgets/connection_menu.dart` | `ConnectionContextMenu` | 接続線タップ時に表示されるコンテキストメニュー。線種・形状・色の切替と接続解除を提供。 |
@@ -295,7 +310,7 @@ lib/
 | `views/widgets/group_edit_dialog.dart` | `GroupEditDialog` | グループの名称・説明・枠線の色を編集するダイアログ。 |
 | `views/widgets/background_grid_painter.dart` | `BackgroundGridOverlay` | 背景グリッド（罫線/ドット）を描画するオーバーレイ。 |
 | `views/widgets/background_settings_dialog.dart` | `BackgroundSettingsDialog` | 背景ガイド（グリッド・背景色・背景画像）を設定するダイアログ。 |
-| `views/widgets/top_action_bar.dart` | `TopActionBar` | Undo/Redo/保存/読み込み/画像・PDF エクスポート/編集/削除/全削除/接続/グループ化/接続モード/オブジェクト一覧/背景ガイド設定/整列のボタンと、オブジェクト件数・Undo 件数の表示。 |
+| `views/widgets/top_action_bar.dart` | `TopActionBar` | 操作カテゴリごとに区切り線で分類し、以下の順で配置: 読み込み/保存/画像・PDF () Undo/Redo () オブジェクト数/操作数 () キャンバス名 () 整列/接続/編集 () 削除/全削除 () グループ化/接続モード/選択モード/全選択 () オブジェクト一覧/背景ガイド設定。 |
 | `views/widgets/object_edit_dialog.dart` | `ObjectEditDialog` | 選択中のオブジェクトの形状・強調・ラベル・詳細・説明・色・ラベル色・説明色を編集するダイアログ。`flex_color_picker` を使用。 |
 
 ---

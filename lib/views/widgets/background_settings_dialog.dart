@@ -94,26 +94,29 @@ class _BackgroundSettingsDialogState extends State<BackgroundSettingsDialog> {
   }) async {
     final picked = await showDialog<Color>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: SizedBox(
-          width: 320,
-          child: ColorPicker(
-            color: initialColor,
-            onColorChanged: (color) {
-              Navigator.of(context).pop(color);
-            },
-            pickersEnabled: const <ColorPickerType, bool>{
-              ColorPickerType.primary: true,
-              ColorPickerType.accent: true,
-              ColorPickerType.bw: true,
-              ColorPickerType.wheel: true,
-            },
-            enableShadesSelection: true,
-            width: 32,
-            height: 32,
-            spacing: 4,
-            runSpacing: 4,
+      builder: (context) => BlockSemantics(
+        child: AlertDialog(
+          key: ValueKey('color_picker_dialog_$title'),
+          title: Text(title),
+          content: SizedBox(
+            width: 320,
+            child: ColorPicker(
+              color: initialColor,
+              onColorChanged: (color) {
+                Navigator.of(context).pop(color);
+              },
+              pickersEnabled: const <ColorPickerType, bool>{
+                ColorPickerType.primary: true,
+                ColorPickerType.accent: true,
+                ColorPickerType.bw: true,
+                ColorPickerType.wheel: true,
+              },
+              enableShadesSelection: true,
+              width: 32,
+              height: 32,
+              spacing: 4,
+              runSpacing: 4,
+            ),
           ),
         ),
       ),
@@ -228,6 +231,7 @@ class _BackgroundSettingsDialogState extends State<BackgroundSettingsDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      key: const ValueKey('background_settings_dialog'),
       title: const Text('背景ガイド設定'),
       content: SizedBox(
         width: 480,

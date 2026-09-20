@@ -25,6 +25,10 @@ class NoteObjectWidget extends ConsumerWidget {
   /// 接続モード中かどうか。true のときドラッグで接続線を作成する。
   final bool connectionMode;
 
+  /// 選択モード中かどうか。true のときタップで選択をトグル（複数選択）。
+  /// キーボードのない環境（Android 等）で Ctrl+タップに代わる操作。
+  final bool selectionMode;
+
   /// 接続モードでドラッグが終了したときに呼び出される。
   /// [targetId] はドラッグ先のオブジェクトの ID。
   final ValueChanged<String?>? onConnectionEnd;
@@ -41,6 +45,7 @@ class NoteObjectWidget extends ConsumerWidget {
     required this.note,
     required this.transformationController,
     this.connectionMode = false,
+    this.selectionMode = false,
     this.onConnectionEnd,
     this.onConnectionDrag,
     this.onConnectionDragEnd,
@@ -74,6 +79,12 @@ class NoteObjectWidget extends ConsumerWidget {
         onTapDown: (_) {
           // 接続モード時はタップで接続を開始しない（ドラッグで処理する）。
           if (connectionMode) return;
+          // 選択モード：タップで選択をトグル（複数選択）。
+          // キーボードのない環境（Android 等）で Ctrl+タップに代わる操作。
+          if (selectionMode) {
+            notifier.toggleSelect(note.id);
+            return;
+          }
           // Ctrl+タップ：選択をトグル（複数選択）
           if (HardwareKeyboard.instance.logicalKeysPressed
               .any((k) => k == LogicalKeyboardKey.controlLeft ||
@@ -86,6 +97,8 @@ class NoteObjectWidget extends ConsumerWidget {
           notifier.selectObject(note.id);
         },
         onPanStart: (details) {
+          // 選択モード：ドラッグで移動させない（タップで選択トグルする）。
+          if (selectionMode) return;
           // ドラッグ開始時にローカルドラフトを実位置へリセットし、
           // 前回のドラッグ等が残したドラフトオフセットの二重加算を防ぐ。
           notifier.resetDraft(note.id);
@@ -100,6 +113,8 @@ class NoteObjectWidget extends ConsumerWidget {
           notifier.selectObject(note.id);
         },
         onPanUpdate: (details) {
+          // 選択モード：ドラッグで移動させない。
+          if (selectionMode) return;
           // スクリーン座標の移動量の現在の拡大率で割って
           // キャンバス座標空間に変換する。
           if (connectionMode) {
@@ -113,6 +128,8 @@ class NoteObjectWidget extends ConsumerWidget {
           notifier.updatePosition(note.id, canvasDelta);
         },
         onPanEnd: (_) {
+          // 選択モード：ドラッグ終了処理をしない。
+          if (selectionMode) return;
           if (connectionMode) {
             // 接続モード：ドラッグ終了を親に報告する（終点検出は親が担当）。
             onConnectionDragEnd?.call();
@@ -122,6 +139,8 @@ class NoteObjectWidget extends ConsumerWidget {
           notifier.endDrag(note.id);
         },
         onPanCancel: () {
+          // 選択モード：ドラッグキャンセル処理をしない。
+          if (selectionMode) return;
           if (connectionMode) return;
           notifier.cancelDrag(note.id);
         },
@@ -130,6 +149,11 @@ class NoteObjectWidget extends ConsumerWidget {
           if (connectionMode) {
             notifier.bringToFront(note.id);
             if (!note.isSelected) notifier.selectObject(note.id);
+            return;
+          }
+          // 選択モード：ダブルタップでも選択をトグル（編集ダイアログは表示しない）。
+          if (selectionMode) {
+            notifier.toggleSelect(note.id);
             return;
           }
           // 通常モード：選択済みでなければ選択する（トグルで解除しない）。
@@ -143,6 +167,11 @@ class NoteObjectWidget extends ConsumerWidget {
           if (connectionMode) {
             notifier.bringToFront(note.id);
             if (!note.isSelected) notifier.selectObject(note.id);
+            return;
+          }
+          // 選択モード：長押しでも選択をトグル（編集ダイアログは表示しない）。
+          if (selectionMode) {
+            notifier.toggleSelect(note.id);
             return;
           }
           // 通常モード：選択済みでなければ選択する（トグルで解除しない）。
