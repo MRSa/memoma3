@@ -132,6 +132,14 @@
 - 履歴は最大 **30 件**保持されます。
 - 新しい操作を行うと Redo スタックはクリアされます。
 
+### 自動保存（自動永続化）
+
+- キャンバス上の操作（メモの追加・移動・編集、接続線、グループ、キャンバス名の変更など）は、**自動的に保存**されます。
+- 保存先はアプリ内部の領域（`hive_ce` の box `memoma3_canvas`）です。ファイル選択は不要です。
+- アプリを終了して再度起動すると、**前回の状態のまま**表示されます。
+- 書き込みはデバウンス（400ms）でまとめ、アプリ終了時に未保存データを確実に書き込みます。
+- 手動の「保存 / 読み込み」（JSON ファイル）は、ファイルを共有・バックアップしたいときに引き続き利用できます。
+
 ### 保存 / 読み込み
 
 - **保存**: 全オブジェクトを JSON 文字列として保存します。
@@ -265,7 +273,8 @@ lib/
 ├── services/
 │   ├── storage_service.dart              # JSON ファイルの保存・読み込み
 │   ├── canvas_export_service.dart        # PNG / PDF エクスポート
-│   └── background_persistence_service.dart # 背景設定の永続化
+│   ├── background_persistence_service.dart # 背景設定の永続化
+│   └── canvas_persistence_service.dart   # キャンバス状態・キャンバス名の自動永続化（hive_ce）
 ├── providers/
 │   ├── canvas_provider.dart       # CanvasNotifier, CanvasNameNotifier, BackgroundConfigNotifier, AlignMode
 │   └── canvas_state.dart          # キャンバス全体の immutable な状態モデル
@@ -297,6 +306,7 @@ lib/
 | `services/storage_service.dart` | `StorageService` | キャンバス状態の JSON 変換・保存・読み込み。プラットフォーム差分を吸収。 |
 | `services/canvas_export_service.dart` | `CanvasExportService` | キャンバスを PNG / PDF にエクスポート。 |
 | `services/background_persistence_service.dart` | `BackgroundPersistenceService` | 背景ガイド設定の `shared_preferences` への永続化・復元。 |
+| `services/canvas_persistence_service.dart` | `CanvasPersistenceService` | キャンバス状態・キャンバス名の `hive_ce` への自動・逐次永続化・復元（デバウンス付き）。 |
 | `providers/canvas_state.dart` | `CanvasState` | オブジェクト・接続線・グループ・選択 ID・Undo/Redo 履歴スタック（最大 30 件）を保持する不変モデル。 |
 | `providers/canvas_provider.dart` | `CanvasNotifier` | オブジェクト・接続線・グループの CRUD、選択、整列、Undo/Redo、JSON 復元/エクスポートを管理。最後に設定された形状を保持し、新規オブジェクトのデフォルト形状として使用する。 |
 | `views/main_canvas_screen.dart` | `MainCanvasScreen` | `InteractiveViewer` を用いたメイン画面。ダブルタップ/長押しでオブジェクト追加。左下にズーム制御パネルを配置。 |
@@ -332,7 +342,8 @@ dependencies:
   url_launcher: ^6.3.0       # http(s) リンクをブラウザで開く
   pdf: ^3.10.8               # キャンバス状態の PDF エクスポート
   shared_preferences: ^2.5.3 # 背景ガイド設定の永続化
-  hive_ce: ^2.20.0           # （予約）ローカルデータストア
+  hive_ce: ^2.20.0           # キャンバス状態・キャンバス名の自動永続化
+  path_provider: ^2.1.4      # Hive のホームディレクトリ取得（Web 以外）
 ```
 
 ---
@@ -375,5 +386,5 @@ Web（白背景）/ Windows・Android（透過背景）の各アイコンを生�
 
 ## 今後の機能拡張（予定）
 
-- オブジェクトのリサイズ・回転
+- オブジェクトのリサイズ
 - クリップボードへのコピー/貼り付け

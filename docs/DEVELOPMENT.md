@@ -45,7 +45,8 @@ memoma3/
 │   ├── services/                 # I/O・永続化層
 │   │   ├── storage_service.dart          # JSON 保存・読み込み
 │   │   ├── canvas_export_service.dart    # PNG / PDF エクスポート
-│   │   └── background_persistence_service.dart # 背景設定の永続化
+│   │   ├── background_persistence_service.dart # 背景設定の永続化
+│   │   └── canvas_persistence_service.dart # キャンバス状態・キャンバス名の自動永続化（hive_ce）
 │   ├── views/                    # 画面層
 │   │   ├── main_canvas_screen.dart       # メインキャンバス画面
 │   │   ├── object_list_screen.dart       # オブジェクト一覧画面
@@ -95,7 +96,8 @@ memoma3/
 | `url_launcher` | `^6.3.0` | http(s) リンクをブラウザで開く |
 | `pdf` | `^3.10.8` | キャンバス状態の PDF エクスポート |
 | `shared_preferences` | `^2.5.3` | 背景ガイド設定の永続化 |
-| `hive_ce` | `^2.20.0` | （予約）ローカルデータストア。現時点では `lib/` 内で未使用 |
+| `hive_ce` | `^2.20.0` | キャンバス状態・キャンバス名の自動・逐次永続化（`CanvasPersistenceService`） |
+| `path_provider` | `^2.1.4` | プラットフォーム固有のディレクトリ取得（Hive のホームディレクトリ指定） |
 
 ### 3.2 開発依存（`dev_dependencies`）
 
@@ -103,8 +105,6 @@ memoma3/
 | --- | --- | --- |
 | `flutter_test` | sdk | ウィジェットテスト |
 | `flutter_lints` | `^6.0.0` | Lint ルールセット |
-
-> **注**: `hive_ce` は `pubspec.yaml` に宣言されていますが、現時点では `lib/` 内で使用されていません。将来のローカルデータストア用途で予約されています。
 
 ### 3.3 アセット
 

@@ -176,13 +176,21 @@ class _BackgroundSettingsDialogState extends State<BackgroundSettingsDialog> {
           child: Text(label, style: Theme.of(context).textTheme.bodySmall),
         ),
         Expanded(
-          child: Slider(
-            value: value,
-            min: 0.0,
-            max: 1.0,
-            divisions: 100,
-            label: '${(value * 100).round()}%',
-            onChanged: onChanged,
+          // Flutter bug #190357 の回避: push ルート内の Slider は孤立した
+          // semantics ノードをシリアライズし、アクセシビリティツリーを
+          // フリーズさせる。Overlay.wrap で portal 子要素を Slider の
+          // サブツリー内に留め、孤立ノードを解消する。
+          child: Overlay.wrap(
+            alwaysSizeToContent: true,
+            clipBehavior: Clip.none,
+            child: Slider(
+              value: value,
+              min: 0.0,
+              max: 1.0,
+              divisions: 100,
+              label: '${(value * 100).round()}%',
+              onChanged: onChanged,
+            ),
           ),
         ),
         SizedBox(
@@ -294,14 +302,20 @@ class _BackgroundSettingsDialogState extends State<BackgroundSettingsDialog> {
                       ),
                     ),
                     Expanded(
-                      child: Slider(
-                        value: _gridSpacing,
-                        min: 10.0,
-                        max: 200.0,
-                        divisions: 19,
-                        label: '${_gridSpacing.round()}',
-                        onChanged: (v) =>
-                            setState(() => _gridSpacing = v),
+                      // Flutter bug #190357 の回避: 上記 _opacitySlider と同じ理由で
+                      // Overlay.wrap で包む。
+                      child: Overlay.wrap(
+                        alwaysSizeToContent: true,
+                        clipBehavior: Clip.none,
+                        child: Slider(
+                          value: _gridSpacing,
+                          min: 10.0,
+                          max: 200.0,
+                          divisions: 19,
+                          label: '${_gridSpacing.round()}',
+                          onChanged: (v) =>
+                              setState(() => _gridSpacing = v),
+                        ),
                       ),
                     ),
                     SizedBox(

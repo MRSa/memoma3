@@ -44,6 +44,9 @@ dependencies:
   # パス操作
   path: ^1.9.1
 
+  # プラットフォーム固有のディレクトリ（Hive のホームディレクトリ取得）
+  path_provider: ^2.1.4
+
   # Matrix4 / Vector4 の使用（InteractiveViewer の変換行列演算）
   vector_math: ^2.4.0
   flex_color_picker: ^4.0.0

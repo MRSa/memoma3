@@ -8,6 +8,8 @@ import 'package:vector_math/vector_math_64.dart' hide Colors;
 import '../../models/connection.dart';
 import '../../models/note_object.dart';
 import '../../providers/canvas_provider.dart';
+import '../../providers/canvas_state.dart';
+import '../../services/canvas_persistence_service.dart';
 import '../../services/storage_service.dart';
 import 'widgets/background_grid_painter.dart';
 import 'widgets/connection_menu.dart';
@@ -33,7 +35,10 @@ class MainCanvasScreen extends ConsumerStatefulWidget {
 }
 
 
-class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen> with SingleTickerProviderStateMixin {
+class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen>
+    with
+        SingleTickerProviderStateMixin,
+        WidgetsBindingObserver {
   final TransformationController _transformationController =
       TransformationController();
 
@@ -81,6 +86,7 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen> with Single
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _transformationController.addListener(_onTransformationChanged);
     _tapIndicatorController = AnimationController(
       vsync: this,
@@ -88,6 +94,38 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen> with Single
     );
     // 起動時に保存済みの背景ガイド設定を読み込む。
     ref.read(backgroundConfigProvider.notifier).load();
+    // 起動時に保存済みのキャンバス状態・キャンバス名を復元する。
+    _restoreCanvas();
+  }
+
+  /// アプリがバックグラウンドに移る（終了する）タイミングで、
+  /// デバウンス待ちの未保存データを確実に書き込む。
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      ref.read(canvasPersistenceProvider).flush();
+    }
+  }
+
+  /// 起動時に保存済みのキャンバス状態とキャンバス名を復元する。
+  ///
+  /// 保存データがない（初回起動）場合は何もしない。
+  Future<void> _restoreCanvas() async {
+    final persistence = ref.read(canvasPersistenceProvider);
+    try {
+      final savedName = await persistence.loadName();
+      if (savedName != null && savedName.isNotEmpty) {
+        ref.read(canvasNameProvider.notifier).set(savedName);
+      }
+      final savedState = await persistence.loadState();
+      if (savedState != null && savedState.isNotEmpty) {
+        ref.read(canvasNotifierProvider.notifier).loadFromJson(savedState);
+      }
+    } catch (_) {
+      // 復元失敗（破損データ等）は初期状態のまま安全に続行する。
+    }
   }
 
   void _onTransformationChanged() {
@@ -105,6 +143,7 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen> with Single
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _transformationController.removeListener(_onTransformationChanged);
     _transformationController.dispose();
     _tapIndicatorController.dispose();
@@ -222,6 +261,61 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen> with Single
     return null;
   }
 
+  /// グループのメンバーの外接矩形を返す。
+  Rect? _groupFrameRect(GroupFrame frame, List<NoteObject> objects) {
+    final members = objects.where((o) => frame.memberIds.contains(o.id));
+    if (members.isEmpty) return null;
+
+    var left = double.infinity;
+    var top = double.infinity;
+    var right = double.negativeInfinity;
+    var bottom = double.negativeInfinity;
+    for (final m in members) {
+      final r = m.rectInCanvas();
+      left = min(left, r.left);
+      top = min(top, r.top);
+      right = max(right, r.right);
+      bottom = max(bottom, r.bottom);
+    }
+    return Rect.fromLTRB(left, top, right, bottom);
+  }
+
+  /// グループ枠の外接矩形の面積を返す（ソート用）。
+  ///
+  /// ネストしたグループでは、面積の大きい（外側の）枠ほど先に描画し、
+  /// 小さい（内側の）枠を手前に出すことで、内側グループがタップで
+  /// 選択できるようにする。
+  double _groupFrameArea(GroupFrame frame, List<NoteObject> objects) {
+    final rect = _groupFrameRect(frame, objects);
+    if (rect == null) return 0.0;
+    return rect.width * rect.height;
+  }
+
+  /// [frame] が他のグループを内包している数を返す（ネスト深さ）。
+  ///
+  /// 内包するグループの外接矩形が、[frame] の外接矩形に完全に含まれる
+  /// ものを「内包」とみなす。この値が大きいほど外側のグループであり、
+  /// 境界線が重ならないようマージンを大きくする。
+  int _groupNestingDepth(
+      GroupFrame frame, List<GroupFrame> frames, List<NoteObject> objects) {
+    final outer = _groupFrameRect(frame, objects);
+    if (outer == null) return 0;
+    var depth = 0;
+    for (final other in frames) {
+      if (other.id == frame.id) continue;
+      final inner = _groupFrameRect(other, objects);
+      if (inner == null) continue;
+      // 内側グループが外側グループに完全に含まれる場合のみ内包とみなす。
+      if (inner.left >= outer.left &&
+          inner.top >= outer.top &&
+          inner.right <= outer.right &&
+          inner.bottom <= outer.bottom) {
+        depth++;
+      }
+    }
+    return depth;
+  }
+
   /// 接続モードでドラッグ終了。接続先オブジェクトへ接続線を追加する。
   /// 接続モードでドラッグが終了したときの処理。
   /// [sourceId] はドラッグ開始時のオブジェクト。ドラッグ先（_dragEnd）に
@@ -332,11 +426,13 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen> with Single
   Future<void> _showConnectionMenu(BuildContext context, Connection connection, Offset screenPos) async {
     final size = MediaQuery.of(context).size;
 
-    // メニューの概算サイズと、タップ位置（線が通る位置）からの余白。
+    // メニューの幅と、タップ位置（線が通る位置）からの余白。
     // 線との重なりを避けるため、十分な距離を取る。
     const menuWidth = 220.0;
-    const menuHeight = 260.0;
     const margin = 40.0;
+    // 高さの概算値（初回フレーム用の初期配置）。実際の高さは
+    // _ConnectionMenuPositioner がレイアウト後に計測して補正する。
+    const estimatedHeight = 320.0;
 
     // デフォルトはタップ位置の右下に配置する。
     double left = screenPos.dx + margin;
@@ -346,13 +442,13 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen> with Single
     if (left + menuWidth > size.width) {
       left = screenPos.dx - margin - menuWidth;
     }
-    if (top + menuHeight > size.height) {
-      top = screenPos.dy - margin - menuHeight;
+    if (top + estimatedHeight > size.height) {
+      top = screenPos.dy - margin - estimatedHeight;
     }
 
     // 最終的に画面内に収める。
     left = left.clamp(0.0, size.width - menuWidth).toDouble();
-    top = top.clamp(0.0, size.height - menuHeight).toDouble();
+    top = top.clamp(0.0, size.height - estimatedHeight).toDouble();
 
     // メニューを閉じた後、選択状態を解除して線の色を元に戻す。
     await Navigator.of(context).push(
@@ -361,18 +457,16 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen> with Single
         barrierColor: Colors.transparent,
         barrierDismissible: true,
         builder: (dialogContext) {
-          return Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                left: left,
-                top: top,
-                child: ConnectionContextMenu(
-                  connection: connection,
-                  anchor: screenPos,
-                ),
-              ),
-            ],
+          return _ConnectionMenuPositioner(
+            screenPos: screenPos,
+            menuWidth: menuWidth,
+            margin: margin,
+            initialLeft: left,
+            initialTop: top,
+            child: ConnectionContextMenu(
+              connection: connection,
+              anchor: screenPos,
+            ),
           );
         },
       ),
@@ -389,6 +483,23 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen> with Single
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(canvasNotifierProvider);
+
+    // キャンバス状態が変更されるたびに、デバウンス付きで逐次永続化する。
+    ref.listen<CanvasState>(
+      canvasNotifierProvider,
+      (previous, next) {
+        ref.read(canvasPersistenceProvider).scheduleSaveState(next);
+      },
+    );
+    // キャンバス名が変更されるたびに永続化する。
+    ref.listen<String>(
+      canvasNameProvider,
+      (previous, next) {
+        if (next.isNotEmpty) {
+          ref.read(canvasPersistenceProvider).saveName(next);
+        }
+      },
+    );
 
     return Scaffold(
       appBar: PreferredSize(
@@ -554,25 +665,37 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen> with Single
                           ),
                         ),
                         // グループ枠を描画する（オブジェクトの後ろに描画）。
-                        ...state.groupFrames.map(
-                          (frame) => GroupFrameWidget(
-                            key: ValueKey(frame.id),
-                            frame: frame,
-                            objects: state.objects,
-                            transformationController: _transformationController,
-                            onTapDown: (globalPos) {
-                              // グループ枠の上でも接続線を選択できるようにする。
-                              final canvasPoint = _screenToCanvas(globalPos);
-                              final connection = _findConnectionAt(canvasPoint);
-                              if (connection != null) {
-                                setState(() => _selectedConnectionId = connection.id);
-                                _showConnectionMenu(context, connection, globalPos);
-                                return true;
-                              }
-                              return false;
-                            },
-                          ),
-                        ),
+                        // ネストしたグループでは、面積の大きい（外側の）枠ほど
+                        // 先に描画し、小さい（内側の）枠を手前に出すことで、
+                        // 内側グループがタップで選択できるようにする。
+                        // また、ネスト深さ（内包するグループ数）に応じてマージンを
+                        // 外側に拡大し、境界線が重ならないようにする。
+                        ...[
+                          for (final frame in state.groupFrames.toList()
+                              ..sort((a, b) => _groupFrameArea(b, state.objects)
+                                  .compareTo(_groupFrameArea(a, state.objects))))
+                            GroupFrameWidget(
+                              key: ValueKey(frame.id),
+                              frame: frame,
+                              objects: state.objects,
+                              transformationController: _transformationController,
+                              margin: 24.0 +
+                                  _groupNestingDepth(
+                                          frame, state.groupFrames, state.objects) *
+                                      20.0,
+                              onTapDown: (globalPos) {
+                                // グループ枠の上でも接続線を選択できるようにする。
+                                final canvasPoint = _screenToCanvas(globalPos);
+                                final connection = _findConnectionAt(canvasPoint);
+                                if (connection != null) {
+                                  setState(() => _selectedConnectionId = connection.id);
+                                  _showConnectionMenu(context, connection, globalPos);
+                                  return true;
+                                }
+                                return false;
+                              },
+                            ),
+                        ],
                         // 接続線を描画する（オブジェクトの後ろに描画）。
                         ...state.connections.map(
                           (connection) {
@@ -875,5 +998,115 @@ class _BuildHintCard extends StatelessWidget {
       ),
       ),
     );
+  }
+}
+
+/// 接続線のコンテキストメニューを、**実際の高さを計測して**画面内に収める位置へ配置する。
+///
+/// 従来の実装はメニュー高さを推測値（260px）でハードコードしており、
+/// 実際の高さ（約 320px）より小さかったため、画面下部で開いた際に
+/// 「接続線を解除」が画面外にはみ出してタップできない問題があった。
+///
+/// 本ウィジェットは、子メニューのレイアウト後に [GlobalKey] で実際の高さを
+/// 取得し、タップ位置（[screenPos]）の右下を基本に、画面からはみ出す場合は
+/// 左上側に反転させて、最終的に画面内に収まるよう位置を補正する。
+class _ConnectionMenuPositioner extends StatefulWidget {
+  final Offset screenPos;
+  final double menuWidth;
+  final double margin;
+  final double initialLeft;
+  final double initialTop;
+  final Widget child;
+
+  const _ConnectionMenuPositioner({
+    required this.screenPos,
+    required this.menuWidth,
+    required this.margin,
+    required this.initialLeft,
+    required this.initialTop,
+    required this.child,
+  });
+
+  @override
+  State<_ConnectionMenuPositioner> createState() =>
+      _ConnectionMenuPositionerState();
+}
+
+class _ConnectionMenuPositionerState extends State<_ConnectionMenuPositioner> {
+  final GlobalKey _menuKey = GlobalKey();
+  double? _measuredHeight;
+
+  /// 実際の高さ（未計測時は推測値）を返す。
+  double get _height => _measuredHeight ?? 320.0;
+
+  /// 画面内に収まるよう、タップ位置の右下 / 左上を切り替えて位置を計算する。
+  (double left, double top) _computePosition(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final w = widget.menuWidth;
+    final h = _height;
+    final m = widget.margin;
+    final sx = widget.screenPos.dx;
+    final sy = widget.screenPos.dy;
+
+    // デフォルトはタップ位置の右下。
+    double left = sx + m;
+    double top = sy + m;
+
+    // 右端からはみ出す場合は左側に、下端からはみ出す場合は上側に反転。
+    if (left + w > size.width) {
+      left = sx - m - w;
+    }
+    if (top + h > size.height) {
+      top = sy - m - h;
+    }
+
+    // 最終的に画面内に収める（負の方向にはみ出す場合も補正）。
+    left = left.clamp(0.0, (size.width - w).clamp(0.0, double.infinity)).toDouble();
+    top = top.clamp(0.0, (size.height - h).clamp(0.0, double.infinity)).toDouble();
+
+    return (left, top);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 初回フレームでは実際の高さが未計測のため、推測値で配置する。
+    // レイアウト後に _measureHeight が呼ばれ、実際の高さで再配置される。
+    final (left, top) = _computePosition(context);
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned(
+          left: left,
+          top: top,
+          child: RepaintBoundary(
+            key: _menuKey,
+            child: widget.child,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// メニューの実際の高さを計測し、必要なら位置を補正して再描画する。
+  void _measureHeight() {
+    final renderBox = _menuKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null || !renderBox.hasSize) return;
+    final actualHeight = renderBox.size.height;
+    if (_measuredHeight == null ||
+        (_measuredHeight! - actualHeight).abs() > 0.5) {
+      setState(() {
+        _measuredHeight = actualHeight;
+      });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // レイアウトが確定した後に高さを計測する。
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _measureHeight();
+    });
   }
 }

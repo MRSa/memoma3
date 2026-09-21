@@ -25,12 +25,19 @@ class GroupFrameWidget extends ConsumerStatefulWidget {
   /// グループ枠の選択はスキップされる。
   final bool Function(Offset globalPosition)? onTapDown;
 
+  /// メンバーの外接矩形からのマージン（px）。
+  ///
+  /// ネストしたグループでは、外側のグループほど大きくして境界線が
+  /// 重ならないようにする（親側でネスト深さに応じて指定する）。
+  final double margin;
+
   const GroupFrameWidget({
     super.key,
     required this.frame,
     required this.objects,
     required this.transformationController,
     this.onTapDown,
+    this.margin = 24.0,
   });
 
   @override
@@ -61,8 +68,8 @@ class _GroupFrameWidgetState extends ConsumerState<GroupFrameWidget> {
       bottom = max(bottom, rect.bottom);
     }
 
-    // マージンを取る。
-    final margin = 24.0;
+    // マージンを取る（ネスト深さに応じて親側から指定される）。
+    final margin = widget.margin;
     return Rect.fromLTRB(
       left - margin,
       top - margin,
