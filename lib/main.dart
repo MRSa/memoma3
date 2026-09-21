@@ -1,9 +1,23 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_ce/hive_ce.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'views/main_canvas_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Hive の初期化。
+  // - Web では IndexedDB を使うためパスは不要。
+  // - それ以外（Windows / Android 等）はアプリケーションサポートディレクトリを
+  //   ホームディレクトリとして指定する。
+  if (!kIsWeb) {
+    final dir = await getApplicationSupportDirectory();
+    Hive.init(dir.path);
+  }
+
   runApp(
     const ProviderScope(
       child: Memoma3App(),

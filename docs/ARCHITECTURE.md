@@ -21,7 +21,8 @@
 ├─────────────────────────────────────────────────────────┤
 │  services  (I/O・永続化層)                                │
 │  StorageService, CanvasExportService,                    │
-│  BackgroundPersistenceService                            │
+│  BackgroundPersistenceService,                           │
+│  CanvasPersistenceService                                │
 ├─────────────────────────────────────────────────────────┤
 │  models  (データ層)                                       │
 │  NoteObject, Connection, GroupFrame, BackgroundConfig    │
@@ -173,9 +174,18 @@ BackgroundConfig
 
 | 対象 | 方式 | 保存先 |
 | --- | --- | --- |
-| キャンバス状態（オブジェクト・接続線・グループ） | JSON ファイル | ユーザー選択のファイル（`file_picker`） |
+| キャンバス状態（オブジェクト・接続線・グループ） | `hive_ce`（自動・逐次） | アプリ内部の永続化領域（`memoma3_canvas` box） |
+| キャンバス状態（エクスポート用） | JSON ファイル | ユーザー選択のファイル（`file_picker`） |
+| キャンバス名 | `hive_ce`（自動） | アプリ内部の永続化領域（`memoma3_canvas` box） |
 | 背景ガイド設定 | `shared_preferences` | アプリ内部の永続化領域 |
-| キャンバス名 | `shared_preferences`（予定） | アプリ内部の永続化領域 |
+
+### 6.1 自動永続化（`hive_ce`）
+
+- **サービス**: `CanvasPersistenceService`（`services/canvas_persistence_service.dart`）。`hive_ce` の box（`memoma3_canvas`）にキャンバス状態の JSON とキャンバス名を保存する。
+- **逐次記録**: `MainCanvasScreen` が `ref.listen(canvasNotifierProvider, ...)` で状態変更を検知し、`scheduleSaveState` を呼ぶ。書き込みは **400ms のデバウンス** でまとめ、高頻度のドラッグ更新でも I/O を抑制する。
+- **確実な書き込み**: アプリがバックグラウンドに移る（`AppLifecycleState.paused` / `hidden`）タイミングで `flush()` を呼び、デバウンス待ちのデータを必ずディスクへ反映する。
+- **復元**: 起動時（`initState`）に `loadName` / `loadState` を読み、`CanvasNameNotifier.set` と `CanvasNotifier.loadFromJson` で前回の状態を復元する。保存データがない（初回起動）場合は初期状態のまま。
+- **初期化**: `main.dart` で `Hive.init` を実行。Web は IndexedDB を使うためパス不要、それ以外（Windows / Android 等）は `path_provider` のアプリケーションサポートディレクトリをホームディレクトリに指定する。
 
 ## 7. 座標系
 

@@ -867,10 +867,10 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
         children: [
           _plainHeader('説明', width: _kDetailWidth),
           _plainHeader('詳細', width: _kContentWidth),
+          _sortHeader('グループ', _SortColumn.group, width: _kGroupWidth),
           _sortHeader('形状', _SortColumn.shape, width: _kShapeWidth),
           _sortHeader('強調', _SortColumn.emphasis, width: _kEmphasisWidth),
           _sortHeader('色', _SortColumn.color, width: _kColorWidth),
-          _sortHeader('グループ', _SortColumn.group, width: _kGroupWidth),
           _sortHeader('接続(from / to)', _SortColumn.connection, width: _kConnectionWidth),
           _sortHeader('X', _SortColumn.x, width: _kXWidth),
           _sortHeader('Y', _SortColumn.y, width: _kYWidth),
@@ -903,6 +903,15 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
             text: o.content,
             maxLines: 5,
             onEdit: () => _onEditContent(context, o),
+          ),
+          // グループ（編集不可）。
+          _cell(
+            width: _kGroupWidth,
+            child: Text(
+              row.groupsFor.isEmpty ? '-' : row.groupsFor.join(' / '),
+              style: const TextStyle(fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           // 形状（タップで編集）。
           _cell(
@@ -955,15 +964,6 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
                   Flexible(child: Text(_colorToHex(o.color), style: const TextStyle(fontSize: 12), overflow: TextOverflow.ellipsis)),
                 ],
               ),
-            ),
-          ),
-          // グループ（編集不可）。
-          _cell(
-            width: _kGroupWidth,
-            child: Text(
-              row.groupsFor.isEmpty ? '-' : row.groupsFor.join(' / '),
-              style: const TextStyle(fontSize: 12),
-              overflow: TextOverflow.ellipsis,
             ),
           ),
           // 接続（from / to、編集不可）。

@@ -113,6 +113,19 @@
 - **役割**: 背景ガイド設定の `shared_preferences` への永続化・復元。
 - **キー**: `memoma3.background_config`。
 
+### 3.4 `CanvasPersistenceService`（`services/canvas_persistence_service.dart`）
+
+- **役割**: キャンバス状態（オブジェクト・接続線・グループ）とキャンバス名を `hive_ce` に自動・逐次で永続化・復元する。
+- **box / キー**: box 名 `memoma3_canvas`、キー `state`（状態 JSON）と `name`（キャンバス名）。
+- **主要メソッド**:
+  - `saveState(CanvasState)` / `loadState()` — 状態 JSON の書き込み・読み出し。
+  - `saveName(String)` / `loadName()` — キャンバス名の書き込み・読み出し。
+  - `scheduleSaveState(CanvasState)` — **400ms デバウンス**付きの非同期保存。高頻度の状態変更（ドラッグ等）をまとめて書き込む。
+  - `flush()` — デバウンス待ちのデータを即座に書き込む（アプリ終了時）。
+  - `clear()` — box の全消去。
+- **接続**: `MainCanvasScreen` が `ref.listen(canvasNotifierProvider, ...)` で状態変更を検知し `scheduleSaveState` を呼ぶ。`didChangeAppLifecycleState` で `paused` / `hidden` 時に `flush()`。起動時 `initState` で `loadName` / `loadState` を復元。
+- **初期化**: `main.dart` で `Hive.init`（Web はパス不要、それ以外は `path_provider` のアプリケーションサポートディレクトリ）。
+
 ## 4. views（画面層）
 
 ### 4.1 `MainCanvasScreen`（`views/main_canvas_screen.dart`）
