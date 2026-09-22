@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_ce/hive_ce.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:material_ui/material_ui.dart' as material_ui;
 
 import 'views/main_canvas_screen.dart';
 
@@ -34,6 +36,16 @@ class Memoma3App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      // --- 日本語対応の設定 ---
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        material_ui.GlobalMaterialLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('ja', 'JP'),
+      ],
       title: 'memoma3',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

@@ -21,6 +21,9 @@ memoma3 の JSON ファイルは、キャンバス上の全オブジェクト（
       "emphasis": 0,
       "labelColor": 4278190080,
       "descriptionColor": 4278233720,
+      "scale": 1.0,
+      "labelFontSizeLevel": 3,
+      "descriptionFontSizeLevel": 2,
       "isSelected": false
     }
   ],
@@ -56,6 +59,7 @@ memoma3 の JSON ファイルは、キャンバス上の全オブジェクト（
 
 - 旧形式（ルートがオブジェクトの配列 `[...]` のみ）のファイルも読み込み可能です。この場合、`connections` と `groups` は空として扱われます。
 - オブジェクトの `emphasis`、接続線の `color`、グループの `name` / `description` / `color` は、旧データにキーがない場合、既定値でフォールバックします。
+- オブジェクトの `scale` / `labelFontSizeLevel` / `descriptionFontSizeLevel` も、旧データにキーがない場合、既定値（`1.0` / `3` / `2`）でフォールバックします。
 
 ## NoteObject フィールド一覧
 
@@ -76,6 +80,9 @@ memoma3 の JSON ファイルは、キャンバス上の全オブジェクト（
 | `emphasis` | Integer | いいえ | 強調レベルのインデックス（`Emphasis` 列挙型の `index`）。未指定の場合は `0`（標準）。 |
 | `labelColor` | Integer | いいえ | ラベル（見出し）テキストの色。`0xAARRGGBB` 形式。未指定の場合は `color` を使用。 |
 | `descriptionColor` | Integer | いいえ | 説明テキストの色。`0xAARRGGBB` 形式。未指定の場合は `color` を使用。 |
+| `scale` | Number (double) | いいえ | サイズ倍率（0.5〜4.0、0.5 刻み）。未指定の場合は `1.0`。描画・接続線・グループ・整列・エクスポートのすべてに反映される。 |
+| `labelFontSizeLevel` | Integer | いいえ | ラベルの文字サイズレベル（1〜5）。未指定の場合は `3`（18px）。 |
+| `descriptionFontSizeLevel` | Integer | いいえ | 説明の文字サイズレベル（1〜5）。未指定の場合は `2`（15px）。 |
 | `isSelected` | Boolean | はい | 選択中かどうか。 |
 
 ## shape の値（NoteShape 列挙型）
@@ -130,7 +137,20 @@ memoma3 の JSON ファイルは、キャンバス上の全オブジェクト（
 
 - `labelColor` と `descriptionColor` は省略可能です。省略された場合は、それぞれ `color` の値が使用されます。
 - `emphasis` は省略可能です。省略された場合は `0`（標準）が使用されます。
+- `scale` / `labelFontSizeLevel` / `descriptionFontSizeLevel` は省略可能です。省略された場合はそれぞれ `1.0` / `3` / `2` が使用されます。
 - 既存のファイルとの後方互換性のため、`labelColor` と `descriptionColor` は値が `null` の場合は JSON に出力されません。
+
+## 文字サイズレベルとフォントサイズ
+
+`labelFontSizeLevel` / `descriptionFontSizeLevel` は 1〜5 の整数で、`fontSizeForLevel(level) = 12 + (level - 1) * 3` px に変換されます。
+
+| レベル | フォントサイズ |
+| --- | --- |
+| 1 | 12px |
+| 2 | 15px |
+| 3 | 18px |
+| 4 | 21px |
+| 5 | 24px |
 
 ## Connection フィールド一覧（接続線）
 

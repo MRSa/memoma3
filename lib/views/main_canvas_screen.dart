@@ -2,8 +2,10 @@ import 'dart:math';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vector_math/vector_math_64.dart' hide Colors;
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../models/connection.dart';
 import '../../models/note_object.dart';
@@ -26,7 +28,7 @@ import 'widgets/top_action_bar.dart';
 /// キャンバスのサイズ（px）。広大なキャンバスとして構成する。
 const Size kCanvasSize = Size(50000, 50000);
 
-/// 無限キャンバスを表示するメイン画面。
+/// キャンバスを表示するメイン画面。
 class MainCanvasScreen extends ConsumerStatefulWidget {
   const MainCanvasScreen({super.key});
 
@@ -92,10 +94,34 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
+    // キーボードショートカット（Ctrl+D で複製）を登録する。
+    HardwareKeyboard.instance.addHandler(_onKey);
     // 起動時に保存済みの背景ガイド設定を読み込む。
     ref.read(backgroundConfigProvider.notifier).load();
     // 起動時に保存済みのキャンバス状態・キャンバス名を復元する。
     _restoreCanvas();
+  }
+
+  /// キーボードショートカットのハンドラ。
+  ///
+  /// - Ctrl+D: 選択中のオブジェクトを複製する。
+  bool _onKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    final isCtrl = HardwareKeyboard.instance.isControlPressed;
+    final isD = event.logicalKey == LogicalKeyboardKey.keyD;
+    if (isCtrl && isD) {
+      final notifier = ref.read(canvasNotifierProvider.notifier);
+      if (notifier.selectedCount > 0) {
+        notifier.duplicateSelected();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('オブジェクトを複製しました')),
+          );
+        }
+      }
+      return true;
+    }
+    return false;
   }
 
   /// アプリがバックグラウンドに移る（終了する）タイミングで、
@@ -144,6 +170,7 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    HardwareKeyboard.instance.removeHandler(_onKey);
     _transformationController.removeListener(_onTransformationChanged);
     _transformationController.dispose();
     _tapIndicatorController.dispose();
@@ -592,7 +619,7 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen>
                 child: InteractiveViewer(
                   transformationController: _transformationController,
                   constrained: false,
-                  boundaryMargin: const EdgeInsets.all(100000), // 無限キャンバス用の有限な大マージン
+                  boundaryMargin: const EdgeInsets.all(100000), // キャンバス用の有限な大マージン
                   minScale: 0.1,
                   maxScale: 5.0,
                   panEnabled: !_connectionMode,
@@ -944,6 +971,12 @@ class _BuildHintCard extends StatelessWidget {
     return '(${offset.dx.round()}, ${offset.dy.round()})';
   }
 
+  Future<String> _getAppVersion() async
+  {
+      final packageInfo = await PackageInfo.fromPlatform();
+      return packageInfo.version;
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -991,6 +1024,28 @@ class _BuildHintCard extends StatelessWidget {
               Text(
                 '表示範囲(右下): ${_fmt(Offset(visibleCanvasBounds.right, visibleCanvasBounds.bottom))}',
                 style: const TextStyle(color: Colors.cyan, fontSize: 11),
+              ),
+              const SizedBox(height: 8),
+              const Divider(color: Colors.white24, height: 6),
+              // コピーライトの表示。コピーライトをタップすると showLicensePage() を表示する。
+              const SizedBox(height: 2),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () async {
+                  final appVersion = await _getAppVersion();
+                  // BuildContextがまだ有効かチェック
+                  if (!context.mounted) return;
+                  showLicensePage(
+                    context: context,
+                    applicationIcon: Image.asset('assets/icons/memoma3_icon.png', width: 48, height: 48),
+                    applicationVersion: appVersion,
+                    applicationLegalese: '©2026- GOKIGEN Project.'
+                  );
+                },
+                child: const Text(
+                  '©2026- GOKIGEN Project.',
+                  style: TextStyle(color: Colors.white, fontSize: 11),
+                ),
               ),
             ],
           ],

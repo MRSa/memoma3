@@ -1,6 +1,6 @@
-import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'my_custom_color_picker.dart';
 
 import '../../../models/connection.dart';
 import '../../../providers/canvas_provider.dart';
@@ -46,31 +46,10 @@ class _ConnectionContextMenuState extends ConsumerState<ConnectionContextMenu> {
 
   /// 接続線の色を選択するカラーピッカーダイアログを表示する。
   Future<void> _pickColor() async {
-    final picked = await showDialog<Color>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('接続線の色を選択'),
-        content: SizedBox(
-          width: 320,
-          child: ColorPicker(
-            color: _color,
-            onColorChanged: (color) {
-              Navigator.of(dialogContext).pop(color);
-            },
-            pickersEnabled: const <ColorPickerType, bool>{
-              ColorPickerType.primary: true,
-              ColorPickerType.accent: true,
-              ColorPickerType.bw: true,
-              ColorPickerType.wheel: true,
-            },
-            enableShadesSelection: true,
-            width: 32,
-            height: 32,
-            spacing: 4,
-            runSpacing: 4,
-          ),
-        ),
-      ),
+    final picked = await MyCustomColorPicker.showAsDialog(
+      context,
+      initialColor: _color,
+      title: '接続線の色を選択',
     );
     if (picked != null && mounted) {
       setState(() => _color = picked);

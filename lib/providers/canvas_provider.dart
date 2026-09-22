@@ -417,6 +417,9 @@ class CanvasNotifier extends Notifier<CanvasState> {
     Emphasis? emphasis,
     Color? labelColor,
     Color? descriptionColor,
+    double? scale,
+    int? labelFontSizeLevel,
+    int? descriptionFontSizeLevel,
   }) {
     final existing = state.getObject(id);
     if (existing == null) return;
@@ -430,6 +433,9 @@ class CanvasNotifier extends Notifier<CanvasState> {
       emphasis: emphasis,
       labelColor: labelColor,
       descriptionColor: descriptionColor,
+      scale: scale,
+      labelFontSizeLevel: labelFontSizeLevel,
+      descriptionFontSizeLevel: descriptionFontSizeLevel,
     );
     // 形状が変更された場合は、次回新規作成時のデフォルト形状として保持する。
     if (shape != null) {
@@ -462,6 +468,66 @@ class CanvasNotifier extends Notifier<CanvasState> {
       history: newHistory.history,
       maxHistory: newHistory.maxHistory,
     );
+  }
+
+  /// 選択中のオブジェクトを複製する（複数選択対応）。
+  ///
+  /// 複製先は元の位置から [offset]（デフォルト右下 20px）だけずらす。
+  /// 接続線・グループ枠は引き継がない（独立した新規オブジェクトとして扱う）。
+  /// 複製したオブジェクトを選択状態にし、Undo 履歴へ積む。
+  void duplicateSelected({Offset offset = const Offset(20, 20)}) {
+    final selected = state.objects.where((o) => o.isSelected).toList();
+    if (selected.isEmpty) return;
+
+    final newHistory = state.pushHistory(state);
+    final newObjects = List<NoteObject>.from(state.objects);
+    String? lastId;
+    for (final o in selected) {
+      final copy = o.copyWith(
+        id: _generateId('obj'),
+        position: Offset(o.position.dx + offset.dx, o.position.dy + offset.dy),
+        isSelected: true,
+      );
+      newObjects.add(copy);
+      lastId = copy.id;
+    }
+    state = CanvasState(
+      objects: newObjects,
+      connections: state.connections,
+      groupFrames: state.groupFrames,
+      selectedId: lastId,
+      history: newHistory.history,
+      maxHistory: newHistory.maxHistory,
+    );
+    lastAddedId = lastId;
+  }
+
+  /// 指定したオブジェクトを複製する（オブジェクト一覧の行単位複製用）。
+  ///
+  /// [duplicateSelected] と同じく、右下 20px ずらし・接続線/グループ非引き継ぎ。
+  void duplicateObject(String id) {
+    final existing = state.getObject(id);
+    if (existing == null) return;
+
+    final newHistory = state.pushHistory(state);
+    final copy = existing.copyWith(
+      id: _generateId('obj'),
+      position: Offset(
+        existing.position.dx + 20,
+        existing.position.dy + 20,
+      ),
+      isSelected: true,
+    );
+    final newObjects = [...state.objects, copy];
+    state = CanvasState(
+      objects: newObjects,
+      connections: state.connections,
+      groupFrames: state.groupFrames,
+      selectedId: copy.id,
+      history: newHistory.history,
+      maxHistory: newHistory.maxHistory,
+    );
+    lastAddedId = copy.id;
   }
 
   // ---------------------------------------------------------------------------
@@ -540,9 +606,11 @@ class CanvasNotifier extends Notifier<CanvasState> {
       indexById[newObjects[i].id] = i;
     }
 
+    // 各オブジェクトのスケール反映済み矩形（rectInCanvas）を使う。
+    // position は左上、width/height はスケール済みサイズ。
     switch (mode) {
       case AlignMode.left:
-        final leftEdge = selected.map((o) => o.position.dx).reduce(min);
+        final leftEdge = selected.map((o) => o.rectInCanvas().left).reduce(min);
         final target = _snap(leftEdge, step);
         for (final o in selected) {
           final i = indexById[o.id]!;
@@ -551,17 +619,18 @@ class CanvasNotifier extends Notifier<CanvasState> {
         break;
       case AlignMode.right:
         final rightEdge =
-            selected.map((o) => o.position.dx + o.size.width).reduce(max);
+            selected.map((o) => o.rectInCanvas().right).reduce(max);
         final target = _snap(rightEdge, step);
         for (final o in selected) {
           final i = indexById[o.id]!;
+          final w = o.rectInCanvas().width;
           newObjects[i] = o.copyWith(
-            position: Offset(target - o.size.width, o.position.dy),
+            position: Offset(target - w, o.position.dy),
           );
         }
         break;
       case AlignMode.top:
-        final topEdge = selected.map((o) => o.position.dy).reduce(min);
+        final topEdge = selected.map((o) => o.rectInCanvas().top).reduce(min);
         final target = _snap(topEdge, step);
         for (final o in selected) {
           final i = indexById[o.id]!;
@@ -570,45 +639,48 @@ class CanvasNotifier extends Notifier<CanvasState> {
         break;
       case AlignMode.bottom:
         final bottomEdge =
-            selected.map((o) => o.position.dy + o.size.height).reduce(max);
+            selected.map((o) => o.rectInCanvas().bottom).reduce(max);
         final target = _snap(bottomEdge, step);
         for (final o in selected) {
           final i = indexById[o.id]!;
+          final h = o.rectInCanvas().height;
           newObjects[i] = o.copyWith(
-            position: Offset(o.position.dx, target - o.size.height),
+            position: Offset(o.position.dx, target - h),
           );
         }
         break;
       case AlignMode.distributeHorizontal:
         final sorted = [...selected]
           ..sort((a, b) => a.position.dx.compareTo(b.position.dx));
-        final leftEdge = sorted.first.position.dx;
+        final leftEdge = sorted.first.rectInCanvas().left;
         final rightEdge =
-            sorted.map((o) => o.position.dx + o.size.width).reduce(max);
+            sorted.map((o) => o.rectInCanvas().right).reduce(max);
         final totalWidth =
-            sorted.fold<double>(0, (sum, o) => sum + o.size.width);
+            sorted.fold<double>(0, (sum, o) => sum + o.rectInCanvas().width);
         final gap = (rightEdge - leftEdge - totalWidth) / (sorted.length - 1);
         var x = leftEdge;
         for (final o in sorted) {
           final i = indexById[o.id]!;
+          final w = o.rectInCanvas().width;
           newObjects[i] = o.copyWith(position: Offset(x, o.position.dy));
-          x += o.size.width + gap;
+          x += w + gap;
         }
         break;
       case AlignMode.distributeVertical:
         final sorted = [...selected]
           ..sort((a, b) => a.position.dy.compareTo(b.position.dy));
-        final topEdge = sorted.first.position.dy;
+        final topEdge = sorted.first.rectInCanvas().top;
         final bottomEdge =
-            sorted.map((o) => o.position.dy + o.size.height).reduce(max);
+            sorted.map((o) => o.rectInCanvas().bottom).reduce(max);
         final totalHeight =
-            sorted.fold<double>(0, (sum, o) => sum + o.size.height);
+            sorted.fold<double>(0, (sum, o) => sum + o.rectInCanvas().height);
         final gap = (bottomEdge - topEdge - totalHeight) / (sorted.length - 1);
         var y = topEdge;
         for (final o in sorted) {
           final i = indexById[o.id]!;
+          final h = o.rectInCanvas().height;
           newObjects[i] = o.copyWith(position: Offset(o.position.dx, y));
-          y += o.size.height + gap;
+          y += h + gap;
         }
         break;
     }

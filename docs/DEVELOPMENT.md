@@ -62,7 +62,8 @@ memoma3/
 │   │       ├── group_frame_painter.dart
 │   │       ├── group_edit_dialog.dart
 │   │       ├── background_grid_painter.dart
-│   │       └── background_settings_dialog.dart
+│   │       ├── background_settings_dialog.dart
+│   │       └── my_custom_color_picker.dart   # 共通カラーピッカー（flex_color_picker ラッパー）
 │   └── widgets/                  # （共通ウィジェット）
 ├── test/
 │   └── widget_test.dart          # ウィジェットテスト
@@ -93,11 +94,13 @@ memoma3/
 | `path` | `^1.9.1` | パス操作 |
 | `vector_math` | `^2.4.0` | `Matrix4` / `Vector4`（InteractiveViewer の変換行列演算） |
 | `flex_color_picker` | `^4.0.0` | 色ピッカー（オブジェクト・接続線・背景の色設定） |
+| `material_ui` | `^1.0.0` | `flex_color_picker` 4.x が `material_ui` 版の `MaterialLocalizations` を要求するため直接依存として追加（`main.dart` の `localizationsDelegates` に `material_ui.GlobalMaterialLocalizations.delegate` を登録） |
 | `url_launcher` | `^6.3.0` | http(s) リンクをブラウザで開く |
 | `pdf` | `^3.10.8` | キャンバス状態の PDF エクスポート |
 | `shared_preferences` | `^2.5.3` | 背景ガイド設定の永続化 |
 | `hive_ce` | `^2.20.0` | キャンバス状態・キャンバス名の自動・逐次永続化（`CanvasPersistenceService`） |
 | `path_provider` | `^2.1.4` | プラットフォーム固有のディレクトリ取得（Hive のホームディレクトリ指定） |
+| `package_info_plus` | `^10.2.1` | アプリバージョン取得（ライセンスページの `applicationVersion` 表示） |
 
 ### 3.2 開発依存（`dev_dependencies`）
 
@@ -191,3 +194,4 @@ spython.exe tools/convert_icon.py
 - **ターミナルの一時的なエラー**: `flutter.bat` や PowerShell コマンドが「CommandNotFoundException」を一時的に返すことがあります。その場合は再実行してください。
 - **SVG → PNG 変換**: `cairosvg` や `svglib` は Windows でネイティブライブラリ（cairo / rlPyCairo）を必要とするため失敗します。`tools/convert_icon.py` はヘッドレスブラウザ（Chrome / Edge）のスクリーンショット方式で変換します。
 - **Lint**: コード変更後は必ず `flutter analyze` を実行し、`No issues found!` を確認してください。
+- **カラーピッカーのローカライズ**: `flex_color_picker` 4.x は `material_ui` パッケージ（Flutter の material ライブラリのフォーク）に依存し、`showPickerDialog` が `material_ui` 版の `MaterialLocalizations` を要求します。`main.dart` の `localizationsDelegates` に `material_ui.GlobalMaterialLocalizations.delegate` を追加しないと、カラーピッカー起動時に「No MaterialLocalizations found」エラーが発生します。

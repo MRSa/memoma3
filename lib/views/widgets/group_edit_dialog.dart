@@ -1,5 +1,5 @@
-import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
+import 'my_custom_color_picker.dart';
 
 import '../../../models/connection.dart';
 
@@ -63,31 +63,10 @@ class _GroupEditDialogState extends State<GroupEditDialog> {
 
   /// 枠線色を選択するためのカラーピッカーダイアログを表示する。
   Future<void> _pickColor() async {
-    final picked = await showDialog<Color>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('枠線の色を選択'),
-        content: SizedBox(
-          width: 320,
-          child: ColorPicker(
-            color: _color,
-            onColorChanged: (color) {
-              Navigator.of(context).pop(color);
-            },
-            pickersEnabled: const <ColorPickerType, bool>{
-              ColorPickerType.primary: true,
-              ColorPickerType.accent: true,
-              ColorPickerType.bw: true,
-              ColorPickerType.wheel: true,
-            },
-            enableShadesSelection: true,
-            width: 32,
-            height: 32,
-            spacing: 4,
-            runSpacing: 4,
-          ),
-        ),
-      ),
+    final picked = await MyCustomColorPicker.showAsDialog(
+      context,
+      initialColor: _color,
+      title: '枠線の色を選択',
     );
     if (picked != null && mounted) {
       setState(() => _color = picked);
