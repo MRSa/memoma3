@@ -57,7 +57,7 @@ CanvasState
 NoteObject
 ├── id: String
 ├── position: Offset               # キャンバス座標
-├── size: Size
+├── size: Size                     # 基準サイズ（scale 未反映）
 ├── content: String                # 本文
 ├── label: String                  # ラベル（見出し）
 ├── detail: String                 # 説明
@@ -66,8 +66,18 @@ NoteObject
 ├── emphasis: Emphasis             # 強調レベル
 ├── labelColor: Color?             # ラベル色（null なら color）
 ├── descriptionColor: Color?       # 説明色（null なら color）
+├── scale: double                  # サイズ倍率（0.5〜4.0、既定 1.0）
+├── labelFontSizeLevel: int        # ラベル文字サイズレベル（1〜5、既定 3）
+├── descriptionFontSizeLevel: int  # 説明文字サイズレベル（1〜5、既定 2）
 └── isSelected: bool
+
+# メソッド
+├── copyWith(...)                  # 一部フィールドを差し替えた複製
+├── rectInCanvas() → Rect          # scale 反映済みのキャンバス矩形
+└── toJson() / fromJson(...)       # JSON シリアライズ・デシリアライズ
 ```
+
+> `rectInCanvas()` は `size × scale` の矩形を返し、接続線・グループ枠・整列・エクスポートのすべてがこれを基準に計算する。
 
 ### 3.3 Connection
 
@@ -117,6 +127,16 @@ BackgroundConfig
 | `GridType` | none, lines, dots |
 | `AlignMode` | left, right, top, bottom, distributeHorizontal, distributeVertical |
 
+### 3.7 定数・ヘルパー（`models/note_object.dart`）
+
+| 名前 | 値 | 説明 |
+| --- | --- | --- |
+| `kObjectScales` | `[0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]` | 選択可能なサイズ倍率 |
+| `kMinFontSizeLevel` / `kMaxFontSizeLevel` | `1` / `5` | 文字サイズレベルの範囲 |
+| `kDefaultLabelFontSizeLevel` | `3` | ラベルの既定レベル（18px） |
+| `kDefaultDescriptionFontSizeLevel` | `2` | 説明の既定レベル（15px） |
+| `fontSizeForLevel(int)` | `12 + (level-1) * 3` px | レベル→px 変換（12〜24px） |
+
 ## 4. 状態管理（Riverpod）
 
 ### 4.1 Provider 一覧
@@ -131,7 +151,7 @@ BackgroundConfig
 
 | カテゴリ | メソッド |
 | --- | --- |
-| オブジェクト | `addObject`, `updatePosition`, `endDrag`, `setPosition`, `bringToFront`, `editObject`, `deleteObject`, `deleteSelected`, `deleteAllObjects`, `makeNewNote` |
+| オブジェクト | `addObject`, `updatePosition`, `endDrag`, `setPosition`, `bringToFront`, `editObject`, `deleteObject`, `deleteSelected`, `deleteAllObjects`, `makeNewNote`, `duplicateSelected`, `duplicateObject` |
 | 選択 | `selectObject`, `toggleSelect`, `selectAll`, `clearSelection`, `_setAllSelected` |
 | 整列 | `alignSelectedToStep`, `alignSelected` |
 | 接続線 | `addConnection`, `connectSelected`, `updateConnection`, `deleteConnection` |
@@ -169,6 +189,14 @@ BackgroundConfig
 | `ConnectionPreviewPainter` | 接続モード中のドラッグプレビュー線。 |
 | `GroupFramePainter` | グループ枠（矩形枠）の描画。 |
 | `BackgroundGridPainter` | 背景グリッド（罫線 / ドット）の描画。 |
+
+### 5.3 カラーピッカー（`MyCustomColorPicker`）
+
+- `lib/views/widgets/my_custom_color_picker.dart` の `MyCustomColorPicker` が、`flex_color_picker` の `ColorPicker` をラップする共通ウィジェット。
+- `showAsDialog(context, initialColor:, title:)` でダイアログ表示し、OK で選択色を `Future<Color?>` として返す（キャンセルは `null`）。
+- 有効化: カラーホイール・シェード選択・カラーコード表示・コピー＆ペースト・OK/キャンセルボタン。
+- 全 5 箇所の `_pickColor`（オブジェクト一覧・背景設定・接続線メニュー・グループ編集・オブジェクト編集）がこれを使用。
+- **注意**: `flex_color_picker` 4.0.0 は `material_ui` パッケージ（material ライブラリのフォーク）に依存し、`showPickerDialog` が `material_ui` 版の `MaterialLocalizations` を要求する。そのため `main.dart` の `localizationsDelegates` に `material_ui.GlobalMaterialLocalizations.delegate` を追加している。
 
 ## 6. 永続化
 

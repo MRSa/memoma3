@@ -1,6 +1,6 @@
-import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'widgets/my_custom_color_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -37,7 +37,9 @@ const double _kGroupWidth = 160.0;
 const double _kConnectionWidth = 220.0;
 const double _kXWidth = 80.0;
 const double _kYWidth = 80.0;
+const double _kScaleWidth = 70.0;
 const double _kCenterWidth = 56.0;
+const double _kDuplicateWidth = 56.0;
 const double _kDeleteWidth = 56.0;
 
 /// 一覧テーブルのソート対象カラム。
@@ -51,6 +53,7 @@ enum _SortColumn {
   connection,
   x,
   y,
+  scale,
 }
 
 /// 一覧テーブルのソート方向。
@@ -190,6 +193,9 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
         return o.position.dx.toStringAsFixed(0);
       case _SortColumn.y:
         return o.position.dy.toStringAsFixed(0);
+      case _SortColumn.scale:
+        // 0.5〜4.0 の 0.5 刻みなので、1 桁小数の文字列で数値順にソートできる。
+        return o.scale.toStringAsFixed(1);
     }
   }
 
@@ -342,25 +348,10 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
 
   /// 色を編集する。カラーピッカーダイアログを表示する。
   Future<void> _pickColor(BuildContext context, NoteObject note) async {
-    final picked = await showDialog<Color>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('色を選択'),
-        content: SizedBox(
-          width: 320,
-          child: ColorPicker(
-            color: note.color,
-            onColorChanged: (color) {
-              Navigator.of(dialogContext).pop(color);
-            },
-            pickersEnabled: const <ColorPickerType, bool>{
-              ColorPickerType.primary: true,
-              ColorPickerType.accent: true,
-              ColorPickerType.bw: true,
-            },
-          ),
-        ),
-      ),
+    final picked = await MyCustomColorPicker.showAsDialog(
+      context,
+      initialColor: note.color,
+      title: '色を選択',
     );
     if (picked != null) {
       ref.read(canvasNotifierProvider.notifier).editObject(id: note.id, color: picked);
@@ -583,6 +574,7 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
       '接続(to)',
       'X',
       'Y',
+      'サイズ',
     ];
     final buffer = StringBuffer();
     buffer.writeln(headers.map(_csvEscape).join(','));
@@ -600,6 +592,7 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
         _connectionsTo(o.id, connections, map).join(' / '),
         o.position.dx.toStringAsFixed(0),
         o.position.dy.toStringAsFixed(0),
+        '${o.scale.toStringAsFixed(1)}倍',
       ];
       buffer.writeln(row.map(_csvEscape).join(','));
     }
@@ -874,7 +867,9 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
           _sortHeader('接続(from / to)', _SortColumn.connection, width: _kConnectionWidth),
           _sortHeader('X', _SortColumn.x, width: _kXWidth),
           _sortHeader('Y', _SortColumn.y, width: _kYWidth),
-          _plainHeader('中心移動', width: _kCenterWidth),
+          _sortHeader('サイズ', _SortColumn.scale, width: _kScaleWidth),
+          _plainHeader('中心', width: _kCenterWidth),
+          _plainHeader('複製', width: _kDuplicateWidth),
           _plainHeader('削除', width: _kDeleteWidth),
         ],
       ),
@@ -1016,6 +1011,15 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
               ),
             ),
           ),
+          // サイズ（倍率）。
+          _cell(
+            width: _kScaleWidth,
+            child: Text(
+              '${o.scale.toStringAsFixed(1)}倍',
+              style: const TextStyle(fontSize: 12),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           // 中心移動ボタン。
           _cell(
             width: _kCenterWidth,
@@ -1023,6 +1027,15 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
               tooltip: '中心座標に設定',
               icon: const Icon(Icons.center_focus_strong, size: 18),
               onPressed: () => _setCenter(context, o),
+            ),
+          ),
+          // 複製ボタン。
+          _cell(
+            width: _kDuplicateWidth,
+            child: IconButton(
+              tooltip: '複製',
+              icon: const Icon(Icons.content_copy, size: 18),
+              onPressed: () => _onDuplicate(context, o),
             ),
           ),
           // 削除ボタン。確認ダイアログで承認されたときのみ削除する。
@@ -1129,6 +1142,16 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
         ],
       ),
     );
+  }
+
+  /// 指定したオブジェクトを複製する。
+  void _onDuplicate(BuildContext context, NoteObject o) {
+    ref.read(canvasNotifierProvider.notifier).duplicateObject(o.id);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('オブジェクトを複製しました')),
+      );
+    }
   }
 
   /// 指定したオブジェクトの削除を確認ダイアログで確認し、

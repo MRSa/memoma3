@@ -68,12 +68,17 @@ class NoteObjectWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(canvasNotifierProvider.notifier);
+    // サイズ倍率を反映した実際の描画サイズ。
+    final scaledSize = Size(
+      note.size.width * note.scale,
+      note.size.height * note.scale,
+    );
 
     return Positioned(
       left: note.position.dx,
       top: note.position.dy,
-      width: note.size.width,
-      height: note.size.height,
+      width: scaledSize.width,
+      height: scaledSize.height,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTapDown: (_) {
@@ -181,7 +186,7 @@ class NoteObjectWidget extends ConsumerWidget {
           _openEditDialog(context, ref, note);
         },
         child: CustomPaint(
-          size: note.size,
+          size: scaledSize,
           painter: NoteShapePainter(
             shape: note.shape,
             color: note.color,
@@ -229,6 +234,9 @@ class NoteObjectWidget extends ConsumerWidget {
                 emphasis: updated.emphasis,
                 labelColor: updated.labelColor,
                 descriptionColor: updated.descriptionColor,
+                scale: updated.scale,
+                labelFontSizeLevel: updated.labelFontSizeLevel,
+                descriptionFontSizeLevel: updated.descriptionFontSizeLevel,
               );
           if (dialogContext.mounted) Navigator.of(dialogContext).pop();
         },
@@ -240,44 +248,28 @@ class NoteObjectWidget extends ConsumerWidget {
   }
 
   Widget _buildNoteContent(BuildContext context) {
-    return Stack(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (note.label.isNotEmpty)
-                Text(
-                  note.label,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    // 強調（Strong）のときはアンダーラインも引く。
-                    decoration: note.emphasis == Emphasis.strong
-                        ? TextDecoration.underline
-                        : null,
-                    color: note.labelColor ?? note.color,
-                    shadows: const [
-                      Shadow(
-                        color: Color(0x66000000),
-                        offset: Offset(1, 1),
-                        blurRadius: 3,
-                      ),
-                    ],
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              const SizedBox(height: 4),
+    // FittedBox で内容をコンテナサイズに収める。
+    // 0.5 倍など小さいオブジェクトで RenderFlex overflow を防ぐ。
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.topLeft,
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (note.label.isNotEmpty)
               Text(
-                note.detail,
+                note.label,
                 style: TextStyle(
-                  fontSize: 14,
-                  // 強調（Strong）のときは文字もボールドにする。
-                  fontWeight:
-                      note.emphasis == Emphasis.strong ? FontWeight.bold : null,
-                  color: note.descriptionColor ?? note.color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: fontSizeForLevel(note.labelFontSizeLevel),
+                  // 強調（Strong）のときはアンダーラインも引く。
+                  decoration: note.emphasis == Emphasis.strong
+                      ? TextDecoration.underline
+                      : null,
+                  color: note.labelColor ?? note.color,
                   shadows: const [
                     Shadow(
                       color: Color(0x66000000),
@@ -286,13 +278,32 @@ class NoteObjectWidget extends ConsumerWidget {
                     ),
                   ],
                 ),
-                maxLines: 3,
+                maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-            ],
-          ),
+            const SizedBox(height: 4),
+            Text(
+              note.detail,
+              style: TextStyle(
+                fontSize: fontSizeForLevel(note.descriptionFontSizeLevel),
+                // 強調（Strong）のときは文字もボールドにする。
+                fontWeight:
+                    note.emphasis == Emphasis.strong ? FontWeight.bold : null,
+                color: note.descriptionColor ?? note.color,
+                shadows: const [
+                  Shadow(
+                    color: Color(0x66000000),
+                    offset: Offset(1, 1),
+                    blurRadius: 3,
+                  ),
+                ],
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

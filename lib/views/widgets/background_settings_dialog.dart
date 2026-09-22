@@ -1,6 +1,6 @@
 import 'package:file_picker/file_picker.dart';
-import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
+import 'my_custom_color_picker.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../models/background_config.dart';
@@ -92,34 +92,10 @@ class _BackgroundSettingsDialogState extends State<BackgroundSettingsDialog> {
     required Color initialColor,
     required ValueChanged<Color> onPicked,
   }) async {
-    final picked = await showDialog<Color>(
-      context: context,
-      builder: (context) => BlockSemantics(
-        child: AlertDialog(
-          key: ValueKey('color_picker_dialog_$title'),
-          title: Text(title),
-          content: SizedBox(
-            width: 320,
-            child: ColorPicker(
-              color: initialColor,
-              onColorChanged: (color) {
-                Navigator.of(context).pop(color);
-              },
-              pickersEnabled: const <ColorPickerType, bool>{
-                ColorPickerType.primary: true,
-                ColorPickerType.accent: true,
-                ColorPickerType.bw: true,
-                ColorPickerType.wheel: true,
-              },
-              enableShadesSelection: true,
-              width: 32,
-              height: 32,
-              spacing: 4,
-              runSpacing: 4,
-            ),
-          ),
-        ),
-      ),
+    final picked = await MyCustomColorPicker.showAsDialog(
+      context,
+      initialColor: initialColor,
+      title: title,
     );
     if (picked != null && mounted) {
       onPicked(picked);

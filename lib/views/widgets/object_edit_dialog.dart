@@ -1,5 +1,5 @@
-import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
+import 'my_custom_color_picker.dart';
 
 import '../../../models/note_object.dart';
 
@@ -58,6 +58,9 @@ class _ObjectEditDialogState extends State<ObjectEditDialog> {
   late Color? _labelColor;
   late Color? _descriptionColor;
   late Emphasis _emphasis;
+  late double _scale;
+  late int _labelFontSizeLevel;
+  late int _descriptionFontSizeLevel;
 
   @override
   void initState() {
@@ -70,6 +73,9 @@ class _ObjectEditDialogState extends State<ObjectEditDialog> {
     _labelColor = widget.note.labelColor;
     _descriptionColor = widget.note.descriptionColor;
     _emphasis = widget.note.emphasis;
+    _scale = widget.note.scale;
+    _labelFontSizeLevel = widget.note.labelFontSizeLevel;
+    _descriptionFontSizeLevel = widget.note.descriptionFontSizeLevel;
   }
 
   @override
@@ -91,6 +97,9 @@ class _ObjectEditDialogState extends State<ObjectEditDialog> {
         emphasis: _emphasis,
         labelColor: _labelColor,
         descriptionColor: _descriptionColor,
+        scale: _scale,
+        labelFontSizeLevel: _labelFontSizeLevel,
+        descriptionFontSizeLevel: _descriptionFontSizeLevel,
       ),
     );
   }
@@ -103,31 +112,10 @@ class _ObjectEditDialogState extends State<ObjectEditDialog> {
     required Color initialColor,
     required ColorPickerTarget target,
   }) async {
-    final picked = await showDialog<Color>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: SizedBox(
-          width: 320,
-          child: ColorPicker(
-            color: initialColor,
-            onColorChanged: (color) {
-              Navigator.of(context).pop(color);
-            },
-            pickersEnabled: const <ColorPickerType, bool>{
-              ColorPickerType.primary: true,
-              ColorPickerType.accent: true,
-              ColorPickerType.bw: true,
-              ColorPickerType.wheel: true,
-            },
-            enableShadesSelection: true,
-            width: 32,
-            height: 32,
-            spacing: 4,
-            runSpacing: 4,
-          ),
-        ),
-      ),
+    final picked = await MyCustomColorPicker.showAsDialog(
+      context,
+      initialColor: initialColor,
+      title: title,
     );
     if (picked != null && mounted) {
       setState(() {
@@ -148,142 +136,243 @@ class _ObjectEditDialogState extends State<ObjectEditDialog> {
     return AlertDialog(
       title: const Text('オブジェクトを編集'),
       content: SizedBox(
-        width: 480,
+        width: 640,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 強調
-              Text('強調', style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: Emphasis.values.map((emphasis) {
-                  final selected = emphasis == _emphasis;
-                  return InkWell(
-                    onTap: () => setState(() => _emphasis = emphasis),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? Theme.of(context).colorScheme.primaryContainer
-                            : null,
-                        border: Border.all(
-                          color: selected
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.grey,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        emphasis.displayName,
-                        style: TextStyle(
-                          fontWeight:
-                              selected ? FontWeight.bold : FontWeight.normal,
-                          color: selected
-                              ? Theme.of(context).colorScheme.onPrimaryContainer
-                              : null,
+              // 上段：強調 / 色 / フォントサイズ（3カラム）
+              // 下段：サイズ
+              // 縦に伸ばさず、横幅を使って並べる。
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 上段：強調 / 色 / フォントサイズ
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 左：強調
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('強調',
+                                style: Theme.of(context).textTheme.bodyMedium),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: Emphasis.values.map((emphasis) {
+                                final selected = emphasis == _emphasis;
+                                return _ChipButton(
+                                  label: emphasis.displayName,
+                                  selected: selected,
+                                  onTap: () =>
+                                      setState(() => _emphasis = emphasis),
+                                );
+                              }).toList(),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                      const SizedBox(width: 24),
+                      // 中：色
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('色',
+                                style: Theme.of(context).textTheme.bodyMedium),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 12,
+                              runSpacing: 8,
+                              children: [
+                                _ColorSwatch(
+                                  label: '本体',
+                                  color: _color,
+                                  onTap: () => _pickColor(
+                                    title: '本体の色を選択',
+                                    initialColor: _color,
+                                    target: ColorPickerTarget.body,
+                                  ),
+                                ),
+                                _ColorSwatch(
+                                  label: 'ラベル色',
+                                  color: _labelColor ?? _color,
+                                  onTap: () => _pickColor(
+                                    title: 'ラベル色を選択',
+                                    initialColor: _labelColor ?? _color,
+                                    target: ColorPickerTarget.label,
+                                  ),
+                                ),
+                                _ColorSwatch(
+                                  label: '説明色',
+                                  color: _descriptionColor ?? _color,
+                                  onTap: () => _pickColor(
+                                    title: '説明色を選択',
+                                    initialColor: _descriptionColor ?? _color,
+                                    target: ColorPickerTarget.description,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      // 右：フォントサイズ（ラベル・説明を横に並べる）
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('フォントサイズ',
+                                style: Theme.of(context).textTheme.bodyMedium),
+                            const SizedBox(height: 8),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // ラベル
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('ラベル',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall),
+                                      const SizedBox(height: 4),
+                                      DropdownButton<int>(
+                                        value: _labelFontSizeLevel,
+                                        underline: const SizedBox.shrink(),
+                                        isExpanded: false,
+                                        items: List.generate(
+                                          kMaxFontSizeLevel -
+                                              kMinFontSizeLevel +
+                                          1,
+                                          (i) {
+                                            final level =
+                                                kMinFontSizeLevel + i;
+                                            return DropdownMenuItem<int>(
+                                              value: level,
+                                              child: Text(
+                                                '$level (${fontSizeForLevel(level).toInt()}px)',
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                        onChanged: (level) {
+                                          if (level != null) {
+                                            setState(() =>
+                                                _labelFontSizeLevel = level);
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                // 説明
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text('説明',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall),
+                                      const SizedBox(height: 4),
+                                      DropdownButton<int>(
+                                        value: _descriptionFontSizeLevel,
+                                        underline: const SizedBox.shrink(),
+                                        isExpanded: false,
+                                        items: List.generate(
+                                          kMaxFontSizeLevel -
+                                              kMinFontSizeLevel +
+                                          1,
+                                          (i) {
+                                            final level =
+                                                kMinFontSizeLevel + i;
+                                            return DropdownMenuItem<int>(
+                                              value: level,
+                                              child: Text(
+                                                '$level (${fontSizeForLevel(level).toInt()}px)',
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                        onChanged: (level) {
+                                          if (level != null) {
+                                            setState(() =>
+                                                _descriptionFontSizeLevel =
+                                                    level);
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // 下段：サイズ
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('サイズ',
+                          style: Theme.of(context).textTheme.bodyMedium),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: kObjectScales.map((s) {
+                          final selected = s == _scale;
+                          return _ChipButton(
+                            label: '${s.toStringAsFixed(1)}倍',
+                            selected: selected,
+                            onTap: () => setState(() => _scale = s),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
               // 形状
               Text('形状', style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
                 children: kDisplayShapes.map((shape) {
                   final selected = shape == _shape;
-                  return InkWell(
+                  return _ChipButton(
+                    label: shape.displayName,
+                    selected: selected,
                     onTap: () {
                       setState(() => _shape = shape);
                       // 形状選択時に即座に lastShape を更新し、
                       // 次回新規作成時のデフォルト形状として保持する。
                       widget.onShapeSelected(shape);
                     },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? Theme.of(context).colorScheme.primaryContainer
-                            : null,
-                        border: Border.all(
-                          color: selected
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.grey,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        shape.displayName,
-                        style: TextStyle(
-                          fontWeight:
-                              selected ? FontWeight.bold : FontWeight.normal,
-                          color: selected
-                              ? Theme.of(context).colorScheme.onPrimaryContainer
-                              : null,
-                        ),
-                      ),
-                    ),
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 16),
-
-              // 色
-              Text('色', style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  _ColorSwatch(
-                    label: '本体',
-                    color: _color,
-                    onTap: () => _pickColor(
-                      title: '本体の色を選択',
-                      initialColor: _color,
-                      target: ColorPickerTarget.body,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  _ColorSwatch(
-                    label: 'ラベル色',
-                    color: _labelColor ?? _color,
-                    onTap: () => _pickColor(
-                      title: 'ラベル色を選択',
-                      initialColor: _labelColor ?? _color,
-                      target: ColorPickerTarget.label,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  _ColorSwatch(
-                    label: '説明色',
-                    color: _descriptionColor ?? _color,
-                    onTap: () => _pickColor(
-                      title: '説明色を選択',
-                      initialColor: _descriptionColor ?? _color,
-                      target: ColorPickerTarget.description,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
               // ラベル
               Text('ラベル', style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               TextField(
                 controller: _labelController,
                 decoration: const InputDecoration(
@@ -291,11 +380,11 @@ class _ObjectEditDialogState extends State<ObjectEditDialog> {
                   labelText: 'ラベル',
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // 説明
               Text('説明', style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               TextField(
                 controller: _detailController,
                 maxLines: 3,
@@ -304,11 +393,11 @@ class _ObjectEditDialogState extends State<ObjectEditDialog> {
                   labelText: '説明',
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // 詳細
               Text('詳細', style: Theme.of(context).textTheme.bodyMedium),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
               TextField(
                 controller: _contentController,
                 maxLines: 6,
@@ -331,6 +420,49 @@ class _ObjectEditDialogState extends State<ObjectEditDialog> {
           child: const Text('保存'),
         ),
       ],
+    );
+  }
+}
+
+/// 選択可能なチップボタン（強調・サイズ・文字サイズレベル用）。
+class _ChipButton extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ChipButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected
+              ? Theme.of(context).colorScheme.primaryContainer
+              : null,
+          border: Border.all(
+            color: selected
+                ? Theme.of(context).colorScheme.primary
+                : Colors.grey,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            color: selected
+                ? Theme.of(context).colorScheme.onPrimaryContainer
+                : null,
+          ),
+        ),
+      ),
     );
   }
 }

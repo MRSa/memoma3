@@ -139,6 +139,20 @@ class TopActionBar extends ConsumerWidget {
                 : () => _onEdit(context, ref),
           ),
           IconButton(
+            tooltip: '複製 (Ctrl+D)',
+            icon: const Icon(Icons.content_copy),
+            onPressed: notifier.selectedCount == 0
+                ? null
+                : () {
+                    notifier.duplicateSelected();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('オブジェクトを複製しました')),
+                      );
+                    }
+                  },
+          ),
+          IconButton(
             tooltip: notifier.selectedCount > 1
                 ? '整列（左/右/上/下/等間隔）'
                 : '整列（X/Y を 10 の倍数に揃える）',

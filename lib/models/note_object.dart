@@ -108,6 +108,29 @@ extension EmphasisName on Emphasis {
   }
 }
 
+/// オブジェクトのサイズ倍率。0.5 倍から 4 倍まで 0.5 刻み。
+///
+/// 既定は 1.0（変更なし）。描画・接続線・グループ・整列・エクスポートの
+/// すべてに [rectInCanvas] 経由で反映される。
+const List<double> kObjectScales = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0];
+
+/// ラベル・説明の文字サイズレベル（1〜5）。
+///
+/// レベル 1 が最小、5 が最大。
+const int kMinFontSizeLevel = 1;
+const int kMaxFontSizeLevel = 5;
+/// ラベルの既定の文字サイズレベル（標準）。
+const int kDefaultLabelFontSizeLevel = 3;
+/// 説明の既定の文字サイズレベル。
+const int kDefaultDescriptionFontSizeLevel = 2;
+
+/// 文字サイズレベル（1〜5）をフォントサイズ（px）に変換する。
+double fontSizeForLevel(int level) {
+  final clamped = level.clamp(kMinFontSizeLevel, kMaxFontSizeLevel);
+  // レベル 1〜5 を 12px〜24px に線形マッピングする。
+  return 12.0 + (clamped - kMinFontSizeLevel) * 3.0;
+}
+
 /// キャンバス上に配置されるオブジェクトのデータモデル。
 /// 不変（immutable）に設計し、copyWith で複製を作成する。
 class NoteObject {
@@ -125,6 +148,12 @@ class NoteObject {
   final Color? labelColor;
   /// 説明テキストの色。未指定の場合は [color] を使用する。
   final Color? descriptionColor;
+  /// サイズ倍率（0.5〜4.0、0.5 刻み）。既定は 1.0。
+  final double scale;
+  /// ラベルの文字サイズレベル（1〜5）。既定は 3。
+  final int labelFontSizeLevel;
+  /// 説明の文字サイズレベル（1〜5）。既定は 3。
+  final int descriptionFontSizeLevel;
   final bool isSelected;
 
   const NoteObject({
@@ -139,6 +168,9 @@ class NoteObject {
     this.emphasis = Emphasis.normal,
     this.labelColor,
     this.descriptionColor,
+    this.scale = 1.0,
+    this.labelFontSizeLevel = kDefaultLabelFontSizeLevel,
+    this.descriptionFontSizeLevel = kDefaultDescriptionFontSizeLevel,
     this.isSelected = false,
   });
 
@@ -155,6 +187,9 @@ class NoteObject {
     Emphasis? emphasis,
     Color? labelColor,
     Color? descriptionColor,
+    double? scale,
+    int? labelFontSizeLevel,
+    int? descriptionFontSizeLevel,
     bool? isSelected,
   }) {
     return NoteObject(
@@ -169,13 +204,24 @@ class NoteObject {
       emphasis: emphasis ?? this.emphasis,
       labelColor: labelColor ?? this.labelColor,
       descriptionColor: descriptionColor ?? this.descriptionColor,
+      scale: scale ?? this.scale,
+      labelFontSizeLevel: labelFontSizeLevel ?? this.labelFontSizeLevel,
+      descriptionFontSizeLevel: descriptionFontSizeLevel ?? this.descriptionFontSizeLevel,
       isSelected: isSelected ?? this.isSelected,
     );
   }
 
-  /// このオブジェクトのキャンバス座標での矩形を返す。
+  /// このオブジェクトのキャンバス座標での矩形を返す（サイズ倍率を反映）。
+  ///
+  /// 接続線・グループ枠・整列・エクスポートのすべてが、このスケール済み
+  /// 矩形を基準に計算するため、サイズ変更と整合する。
   Rect rectInCanvas() {
-    return Rect.fromLTWH(position.dx, position.dy, size.width, size.height);
+    return Rect.fromLTWH(
+      position.dx,
+      position.dy,
+      size.width * scale,
+      size.height * scale,
+    );
   }
 
   /// Offset を JSON 化可能な形 ({x, y}) に変換する。
@@ -207,6 +253,9 @@ class NoteObject {
       'emphasis': emphasis.index,
       if (labelColor != null) 'labelColor': labelColor!.toARGB32(),
       if (descriptionColor != null) 'descriptionColor': descriptionColor!.toARGB32(),
+      'scale': scale,
+      'labelFontSizeLevel': labelFontSizeLevel,
+      'descriptionFontSizeLevel': descriptionFontSizeLevel,
       'isSelected': isSelected,
     };
   }
@@ -241,6 +290,13 @@ class NoteObject {
       descriptionColor: json['descriptionColor'] != null
           ? Color(json['descriptionColor'] as int)
           : null,
+      // 旧形式（これらのキーがない）は既定値で後方互換。
+      scale: (json['scale'] as num?)?.toDouble() ?? 1.0,
+      labelFontSizeLevel: (json['labelFontSizeLevel'] as num?)?.toInt() ??
+          kDefaultLabelFontSizeLevel,
+      descriptionFontSizeLevel:
+          (json['descriptionFontSizeLevel'] as num?)?.toInt() ??
+              kDefaultDescriptionFontSizeLevel,
       isSelected: json['isSelected'] as bool? ?? false,
     );
   }

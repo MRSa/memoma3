@@ -7,11 +7,12 @@
 ### 1.1 `NoteObject`（`models/note_object.dart`）
 
 - **役割**: キャンバス上の 1 つのオブジェクト（メモ）を表す不変データクラス。
-- **プロパティ**: `id`, `position`, `size`, `content`, `label`, `detail`, `color`, `shape`, `emphasis`, `labelColor?`, `descriptionColor?`, `isSelected`。
+- **プロパティ**: `id`, `position`, `size`, `content`, `label`, `detail`, `color`, `shape`, `emphasis`, `labelColor?`, `descriptionColor?`, `scale`（0.5〜4.0、既定 1.0）, `labelFontSizeLevel`（1〜5、既定 3）, `descriptionFontSizeLevel`（1〜5、既定 2）, `isSelected`。
 - **主要メソッド**:
   - `copyWith(...)`: 一部フィールドを差し替えた複製を生成。
-  - `toJson()` / `fromJson(...)`: JSON へのシリアライズ・デシリアライズ。
-- **関連定数**: `kDisplayShapes`（新規作成時に選択可能な形状のリスト。cloud / trapezium を除く）。
+  - `rectInCanvas()`: `size × scale` のキャンバス矩形を返す。接続線・グループ枠・整列・エクスポートの基準になる。
+  - `toJson()` / `fromJson(...)`: JSON へのシリアライズ・デシリアライズ（`scale` / `labelFontSizeLevel` / `descriptionFontSizeLevel` は旧データにキーがない場合既定値でフォールバック）。
+- **関連定数**: `kDisplayShapes`（新規作成時に選択可能な形状のリスト。cloud / trapezium を除く）、`kObjectScales`（サイズ倍率 0.5〜4.0）、`kMinFontSizeLevel` / `kMaxFontSizeLevel`（1〜5）、`fontSizeForLevel(int)`（レベル→px 変換、12〜24px）。
 
 ### 1.2 `NoteShape`（`models/note_object.dart`）
 
@@ -72,7 +73,7 @@
 - **役割**: キャンバス状態を管理する `Notifier`。オブジェクト・接続線・グループの CRUD、選択、整列、Undo/Redo、ドラッグ中のローカル状態を担当。
 - **ドラッグ関連フィールド**: `localDraftPositions`, `dragStartPositions`, `dragStartCanvas`, `lastAddedId`, `lastShape`。
 - **主要メソッド**:
-  - **オブジェクト**: `addObject`, `updatePosition`, `endDrag`, `setPosition`, `cancelDrag`, `resetDraft`, `clearLocalDrafts`, `bringToFront`, `editObject`, `deleteObject`, `deleteSelected`, `deleteAllObjects`, `makeNewNote`, `updateLastShape`。
+  - **オブジェクト**: `addObject`, `updatePosition`, `endDrag`, `setPosition`, `cancelDrag`, `resetDraft`, `clearLocalDrafts`, `bringToFront`, `editObject`, `deleteObject`, `deleteSelected`, `deleteAllObjects`, `makeNewNote`, `updateLastShape`, `duplicateSelected`（選択分複製、右下 20px ずらし・接続線/グループ非引き継ぎ）, `duplicateObject`（単一オブジェクト複製、一覧行用）。
   - **選択**: `selectObject`, `toggleSelect`, `selectAll`, `clearSelection`, `_setAllSelected`。
   - **整列**: `alignSelectedToStep`, `alignSelected`。
   - **接続線**: `addConnection`, `connectSelected`, `updateConnection`, `deleteConnection`。
@@ -130,7 +131,7 @@
 
 ### 4.1 `MainCanvasScreen`（`views/main_canvas_screen.dart`）
 
-- **役割**: アプリのメイン画面。無限キャンバスの描画、パン・ズーム、オブジェクト操作、接続モード、整列、エクスポート、背景設定の入口。
+- **役割**: アプリのメイン画面。キャンバスの描画、パン・ズーム、オブジェクト操作、接続モード、整列、エクスポート、背景設定の入口。
 - **定数**: `kCanvasSize = Size(50000, 50000)`。
 - **描画順序（Z 順）**: 背景色 → 背景画像 → グリッド → グループ枠 → 接続線 → オブジェクト。
 - **内部ウィジェット**: `_ZoomControlPanel`（ズーム操作パネル）。
@@ -138,10 +139,11 @@
 ### 4.2 `ObjectListScreen`（`views/object_list_screen.dart`）
 
 - **役割**: オブジェクト一覧画面。全オブジェクトの属性を表示・編集し、CSV エクスポートを提供。
-- **列**: No. / 名称（左固定）+ 説明 / 詳細 / 形状 / 強調 / 色 / グループ / 接続(from) / 接続(to) / X / Y / 中心移動 / 削除（右スクロール）。
+- **列**: No. / 名称（左固定）+ 説明 / 詳細 / グループ / 形状 / 強調 / 色 / 接続(from/to) / X / Y / サイズ / 中心 / 複製 / 削除（右スクロール）。
 - **フィルタ**: 名称（テキスト）、形状（複数選択）、強調（複数選択）。
-- **ソート**: 列ヘッダクリックで昇降順切替。
-- **CSV**: `_buildCsv`（UTF-8 BOM 付き、`_csvEscape` でエスケープ、`_colorToHex` で #RRGGBB）。
+- **ソート**: 列ヘッダクリックで昇降順切替（サイズ列もソート対象）。
+- **複製**: 行の「複製」ボタンで `duplicateObject(id)` を呼び、そのオブジェクトを複製（右下 20px ずらし）。
+- **CSV**: `_buildCsv`（UTF-8 BOM 付き、`_csvEscape` でエスケープ、`_colorToHex` で #RRGGBB、サイズ列は `1.0倍` 形式）。
 
 ## 5. widgets（部品層）
 
@@ -162,7 +164,10 @@
 
 ### 5.4 `ObjectEditDialog`（`widgets/object_edit_dialog.dart`）
 
-- **役割**: オブジェクトの編集ダイアログ。ラベル・本文・説明・形状・強調・色（本体・ラベル・説明）を設定。
+- **役割**: オブジェクトの編集ダイアログ。上段に「強調 / 色 / フォントサイズ」の 3 カラム、下段に「サイズ」、その後に形状・ラベル・説明・詳細を配置。
+- **フォントサイズ**: ラベル・説明それぞれ `DropdownButton` で 1〜5 段階を選択（選択肢に px 表示、例: `3 (18px)`）。
+- **サイズ**: 0.5 倍〜4.0 倍のチップボタン（`kObjectScales`）。
+- **色**: `MyCustomColorPicker.showAsDialog` で本体色・ラベル色・説明色を選択。
 
 ### 5.5 `ConnectionPainter`（`widgets/connection_painter.dart`）
 
@@ -180,6 +185,7 @@
 
 - **役割**: グループ枠を描画・操作するウィジェット。ドラッグで移動、メンバーの追加・削除を担当。
 - **描画**: `GroupFramePainter` で矩形枠を描画。
+- **ネスト対応**: `margin` パラメータ（既定 24px）で枠の内側余白を制御。ネストしたグループは外側ほど margin を大きくし（`24 + nestingDepth * 20` px）、境界線が重ならないようにする。
 
 ### 5.9 `GroupFramePainter`（`widgets/group_frame_painter.dart`）
 
@@ -197,6 +203,16 @@
 ### 5.12 `BackgroundSettingsDialog`（`widgets/background_settings_dialog.dart`）
 
 - **役割**: 背景ガイド設定ダイアログ。グリッド種類・間隔・色・不透明度、背景色・不透明度、背景画像・不透明度を設定。
+- **色**: `MyCustomColorPicker.showAsDialog` で背景色・背景画像色を選択。
+- **Slider**: Flutter バグ #190357 の回避のため `Overlay.wrap(alwaysSizeToContent: true, clipBehavior: Clip.none, ...)` でラップ。
+
+### 5.13 `MyCustomColorPicker`（`views/widgets/my_custom_color_picker.dart`）
+
+- **役割**: `flex_color_picker` の `ColorPicker` をラップする共通カラーピッカー。
+- **API**: `MyCustomColorPicker.showAsDialog(context, initialColor:, title:)` → `Future<Color?>`（OK で選択色、キャンセルで `null`）。
+- **有効化**: カラーホイール・シェード選択・カラーコード表示（編集可）・コピー＆ペースト・OK/キャンセルボタン。
+- **使用箇所**: オブジェクト一覧・背景設定ダイアログ・接続線コンテキストメニュー・グループ編集ダイアログ・オブジェクト編集ダイアログの 5 箇所の `_pickColor`。
+- **注意**: `flex_color_picker` 4.0.0 は `material_ui` パッケージに依存するため、`main.dart` の `localizationsDelegates` に `material_ui.GlobalMaterialLocalizations.delegate` を追加している。
 
 ## 6. 依存関係のまとめ
 
