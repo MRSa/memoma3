@@ -252,7 +252,8 @@ class TopActionBarLeft extends ConsumerWidget {
       if (path != null) {
         // 保存したファイル名（拡張子を除く）が現在のキャンバス名と異なる場合は、
         // そのファイル名をキャンバス名として設定する。
-        final savedName = p.basenameWithoutExtension(path);
+        // final savedName = p.basenameWithoutExtension(path);
+        final savedName = _getCleanBasename(path);
         if (savedName.isNotEmpty && savedName != canvasName) {
           ref.read(canvasNameProvider.notifier).set(savedName);
         }
@@ -268,6 +269,33 @@ class TopActionBarLeft extends ConsumerWidget {
         showErrorDialog(context, 'エラーが発生しました', '保存中にエラーが発生しました。');
       }
     }
+  }
+  
+  /// 💡 Androidの content URI や SDカード識別子付きパスからでも純粋なファイル名（拡張子なし）を抽出するヘルパー
+  String _getCleanBasename(String path)
+  {
+    if (path.isEmpty) return '';
+
+    // ----- Android の Content URI (content://...) の場合、末尾のエンコードされた文字列からファイル名を抽出
+    String fileName = '';    
+    if (path.startsWith('content://')) {
+      // URIの最後のセグメントを取得（%2F などのスラッシュを考慮してデコード）
+      final decodedPath = Uri.decodeFull(path);
+      fileName = decodedPath.split('/').last;
+    } else {
+      // 通常のファイルパスの場合
+      fileName = p.basename(path);
+    }
+    
+    // Android特有の「SDカード識別子（例: 12A4-B5C6:filename.json）」が含まれる場合の対策
+    // コロン (:) が含まれている場合は、最後のコロン以降を純粋なファイル名とする
+    if (fileName.contains(':')) {
+      fileName = fileName.split(':').last;
+    }
+    
+    // 拡張子を除去する
+    int dotIndex = fileName.lastIndexOf('.');
+    return (dotIndex != -1) ? fileName.substring(0, dotIndex) : fileName;
   }
 
   Future<void> _onLoad(BuildContext context, WidgetRef ref) async {
