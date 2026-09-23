@@ -255,7 +255,11 @@ class TopActionBarLeft extends ConsumerWidget {
         // final savedName = p.basenameWithoutExtension(path);
         final savedName = _getCleanBasename(path);
         if (savedName.isNotEmpty && savedName != canvasName) {
-          ref.read(canvasNameProvider.notifier).set(savedName);
+          // 💡 数字のみ（AndroidのドキュメントID）の場合は題名を更新しないようにする
+          final isNumericOnly = RegExp(r'^\d+$').hasMatch(savedName);
+          if (!isNumericOnly) {
+            ref.read(canvasNameProvider.notifier).set(savedName);
+          }
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
