@@ -98,7 +98,7 @@ class _TopActionBarState extends ConsumerState<TopActionBar> {
         // ページ読み込み中は左ページを表示する（既定）。
         if (!_showRightPage) {
           return Padding(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(2),
             child: Row(
               children: [
                 Expanded(child: _buildLeft()),
@@ -112,7 +112,7 @@ class _TopActionBarState extends ConsumerState<TopActionBar> {
           );
         } else {
           return Padding(
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(1),
             child: Row(
               children: [
                 IconButton(
@@ -120,7 +120,12 @@ class _TopActionBarState extends ConsumerState<TopActionBar> {
                   icon: const Icon(Icons.chevron_left),
                   onPressed: _togglePage,
                 ),
-                Expanded(child: _buildRight()),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: _buildRight()
+                  )
+                ),
               ],
             ),
           );
