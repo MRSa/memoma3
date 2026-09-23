@@ -170,7 +170,10 @@ class _GroupFrameWidgetState extends ConsumerState<GroupFrameWidget> {
           if (dialogContext.mounted) Navigator.of(dialogContext).pop();
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('グループを解除しました')),
+              const SnackBar(
+                duration: Duration(milliseconds: 1500),
+                content: Text('グループを解除しました')
+              ),
             );
           }
         },

@@ -80,7 +80,10 @@ class _ConnectionContextMenuState extends ConsumerState<ConnectionContextMenu> {
               if (confirmContext.mounted) Navigator.of(confirmContext).pop();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('接続線を解除しました')),
+                  const SnackBar(
+                    duration: Duration(milliseconds: 1500),
+                    content: Text('接続線を解除しました')
+                  ),
                 );
                 // 接続線が消えたため、コンテキストメニュー自体も閉じる。
                 Navigator.of(context).pop();

@@ -53,7 +53,10 @@ class TopActionBarRight extends ConsumerWidget {
                   notifier.duplicateSelected();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('オブジェクトを複製しました')),
+                      const SnackBar(
+                        duration: Duration(milliseconds: 1500),
+                        content: Text('オブジェクトを複製しました')
+                      ),
                     );
                   }
                 },
@@ -73,6 +76,7 @@ class TopActionBarRight extends ConsumerWidget {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
+                          duration: Duration(milliseconds: 1500),
                           content: Text('選択中のオブジェクトを 10 の倍数に整列しました'),
                         ),
                       );
@@ -101,7 +105,10 @@ class TopActionBarRight extends ConsumerWidget {
                   notifier.connectSelected();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('接続しました')),
+                      const SnackBar(
+                        duration: Duration(milliseconds: 1500),
+                        content: Text('接続しました'),
+                      ),
                     );
                   }
                 },
@@ -285,7 +292,10 @@ class TopActionBarRight extends ConsumerWidget {
     if (dialogContext.mounted) Navigator.of(dialogContext).pop();
     final messenger = ScaffoldMessenger.of(dialogContext);
     messenger.showSnackBar(
-      SnackBar(content: Text(_alignModeLabel(mode))),
+      SnackBar(
+        duration: Duration(milliseconds: 1500),
+        content: Text(_alignModeLabel(mode))
+      ),
     );
   }
 
@@ -319,7 +329,10 @@ class TopActionBarRight extends ConsumerWidget {
           if (dialogContext.mounted) Navigator.of(dialogContext).pop();
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('背景ガイド設定を保存しました')),
+              const SnackBar(
+                duration: Duration(milliseconds: 1500),
+                content: Text('背景ガイド設定を保存しました')
+              ),
             );
           }
         },
@@ -331,7 +344,10 @@ class TopActionBarRight extends ConsumerWidget {
           if (dialogContext.mounted) Navigator.of(dialogContext).pop();
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('背景ガイド設定を初期値に戻しました')),
+              const SnackBar(
+                duration: Duration(milliseconds: 1500),
+                content: Text('背景ガイド設定を初期値に戻しました')
+              ),
             );
           }
         },
@@ -366,7 +382,10 @@ class TopActionBarRight extends ConsumerWidget {
               if (dialogContext.mounted) Navigator.of(dialogContext).pop();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('オブジェクトを削除しました')),
+                  const SnackBar(
+                    duration: Duration(milliseconds: 1500),
+                    content: Text('オブジェクトを削除しました')
+                  ),
                 );
               }
             },
@@ -401,7 +420,10 @@ class TopActionBarRight extends ConsumerWidget {
               if (dialogContext.mounted) Navigator.of(dialogContext).pop();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('全オブジェクトを削除しました')),
+                  const SnackBar(
+                    duration: Duration(milliseconds: 1500),
+                    content: Text('全オブジェクトを削除しました')
+                  ),
                 );
               }
             },

@@ -68,12 +68,13 @@ class TopActionBarLeft extends ConsumerWidget {
         // [3] 状態表示：オブジェクト数 / 操作数（Undo 件数）
         // ---------------------------------------------------------------
         Text(
-          'メモ: $itemCount',
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          ' メモ:$itemCount',
+          style: const TextStyle(fontWeight: FontWeight.normal),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 6),
         Text(
-          '操作: $undoCount',
+          '操作:$undoCount ',
+          style: const TextStyle(fontWeight: FontWeight.normal),
         ),
         actionBarDivider(context),
         // ---------------------------------------------------------------
@@ -159,7 +160,10 @@ class TopActionBarLeft extends ConsumerWidget {
     if (state.objects.isEmpty) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('エクスポートするオブジェクトがありません')),
+          const SnackBar(
+            duration: Duration(milliseconds: 1500),
+            content: Text('エクスポートするオブジェクトがありません')
+          ),
         );
       }
       return;
@@ -207,6 +211,7 @@ class TopActionBarLeft extends ConsumerWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          duration: Duration(milliseconds: 1500),
           content: Text(
             path != null ? 'エクスポートしました: $path' : 'エクスポートしました',
           ),
@@ -215,7 +220,10 @@ class TopActionBarLeft extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('エクスポート中にエラーが発生しました: $e')),
+          SnackBar(
+            duration: Duration(milliseconds: 1500),
+            content: Text('エクスポート中にエラーが発生しました: $e')
+          ),
         );
       }
     }
@@ -249,7 +257,10 @@ class TopActionBarLeft extends ConsumerWidget {
           ref.read(canvasNameProvider.notifier).set(savedName);
         }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('保存しました: $path')),
+          SnackBar(
+            duration: Duration(milliseconds: 1500),
+            content: Text('保存しました: $path')
+          ),
         );
       }
     } catch (e) {
@@ -273,7 +284,10 @@ class TopActionBarLeft extends ConsumerWidget {
           notifier.loadFromJson(state.toJson());
           if (!context.mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('読み込みました')),
+            const SnackBar(
+              duration: Duration(milliseconds: 1500),
+              content: Text('読み込みました')
+            ),
           );
         } catch (e) {
           if (context.mounted) {
@@ -294,7 +308,10 @@ class TopActionBarLeft extends ConsumerWidget {
         }
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('読み込みました')),
+          const SnackBar(
+            duration: Duration(milliseconds: 1500),
+            content: Text('読み込みました')
+          ),
         );
       }
     } catch (e) {

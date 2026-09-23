@@ -485,7 +485,10 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
     _updatePosition(note.id, target.dx, target.dy);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('中心座標に設定しました')),
+        const SnackBar(
+          duration: Duration(milliseconds: 1500),
+          content: Text('位置を中心座標に設定しました')
+        ),
       );
     }
   }
@@ -542,7 +545,10 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
     notifier.addObject(newNote);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('先頭にオブジェクトを追加しました')),
+        const SnackBar(
+          duration: Duration(milliseconds: 1500),
+          content: Text('先頭にオブジェクトを追加しました')
+        ),
       );
     }
   }
@@ -613,7 +619,10 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
     if (state.objects.isEmpty) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('エクスポートするオブジェクトがありません')),
+          const SnackBar(
+            duration: Duration(milliseconds: 1500),
+            content: Text('エクスポートするオブジェクトがありません')
+          ),
         );
       }
       return;
@@ -631,13 +640,17 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          duration: Duration(milliseconds: 1500),
           content: Text(path != null ? 'エクスポートしました: $path' : 'エクスポートしました'),
         ),
       );
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('エクスポート中にエラーが発生しました: $e')),
+          SnackBar(
+            duration: Duration(milliseconds: 1500),
+            content: Text('エクスポート中にエラーが発生しました: $e')
+          ),
         );
       }
     }
@@ -1149,7 +1162,10 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
     ref.read(canvasNotifierProvider.notifier).duplicateObject(o.id);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('オブジェクトを複製しました')),
+        const SnackBar(
+          duration: Duration(milliseconds: 1500),
+          content: Text('オブジェクトを複製しました')
+        ),
       );
     }
   }
@@ -1179,7 +1195,10 @@ class _ObjectListScreenState extends ConsumerState<ObjectListScreen> {
               if (dialogContext.mounted) Navigator.of(dialogContext).pop();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('オブジェクトを削除しました')),
+                  const SnackBar(
+                    duration: Duration(milliseconds: 1500),
+                    content: Text('オブジェクトを削除しました')
+                  ),
                 );
               }
             },

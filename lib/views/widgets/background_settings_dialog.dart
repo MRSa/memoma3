@@ -110,7 +110,8 @@ class _BackgroundSettingsDialogState extends State<BackgroundSettingsDialog> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('背景画像は Web 環境では未対応です'),
+            duration: Duration(milliseconds: 3500),
+            content: Text('背景画像の設定は Web 環境では未対応です'),
           ),
         );
       }

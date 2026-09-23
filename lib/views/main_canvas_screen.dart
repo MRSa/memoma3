@@ -115,7 +115,10 @@ class _MainCanvasScreenState extends ConsumerState<MainCanvasScreen>
         notifier.duplicateSelected();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('オブジェクトを複製しました')),
+            const SnackBar(
+              duration: Duration(milliseconds: 1500),
+              content: Text('オブジェクトを複製しました')
+            ),
           );
         }
       }

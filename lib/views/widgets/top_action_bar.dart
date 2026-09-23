@@ -83,7 +83,7 @@ class _TopActionBarState extends ConsumerState<TopActionBar> {
         if (wide) {
           // 1 行モード：左・右のボタン群を 1 行に並べる。
           return Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(4),
             child: Row(
               children: [
                 Expanded(child: _buildLeft()),
@@ -98,7 +98,7 @@ class _TopActionBarState extends ConsumerState<TopActionBar> {
         // ページ読み込み中は左ページを表示する（既定）。
         if (!_showRightPage) {
           return Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(4),
             child: Row(
               children: [
                 Expanded(child: _buildLeft()),
@@ -112,7 +112,7 @@ class _TopActionBarState extends ConsumerState<TopActionBar> {
           );
         } else {
           return Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(4),
             child: Row(
               children: [
                 IconButton(
@@ -148,7 +148,7 @@ class _TopActionBarState extends ConsumerState<TopActionBar> {
 /// 左・右のアクションバーで共通して使うため、トップレベル関数として公開する。
 Widget actionBarDivider(BuildContext context) {
   return Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 2),
     child: VerticalDivider(
       width: 1,
       thickness: 1,
