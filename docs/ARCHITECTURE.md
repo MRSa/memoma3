@@ -22,7 +22,8 @@
 │  services  (I/O・永続化層)                                │
 │  StorageService, CanvasExportService,                    │
 │  BackgroundPersistenceService,                           │
-│  CanvasPersistenceService                                │
+│  CanvasPersistenceService,                               │
+│  ActionBarPagePersistenceService                         │
 ├─────────────────────────────────────────────────────────┤
 │  models  (データ層)                                       │
 │  NoteObject, Connection, GroupFrame, BackgroundConfig    │
@@ -149,15 +150,20 @@ BackgroundConfig
 
 ### 4.2 CanvasNotifier の主なメソッド
 
-| カテゴリ | メソッド |
-| --- | --- |
-| オブジェクト | `addObject`, `updatePosition`, `endDrag`, `setPosition`, `bringToFront`, `editObject`, `deleteObject`, `deleteSelected`, `deleteAllObjects`, `makeNewNote`, `duplicateSelected`, `duplicateObject` |
-| 選択 | `selectObject`, `toggleSelect`, `selectAll`, `clearSelection`, `_setAllSelected` |
-| 整列 | `alignSelectedToStep`, `alignSelected` |
-| 接続線 | `addConnection`, `connectSelected`, `updateConnection`, `deleteConnection` |
-| グループ | `createGroup`, `addToGroup`, `updateGroup`, `deleteGroup`, `moveGroup`, `endGroupDrag`, `resetGroupDrafts` |
-| Undo/Redo | `undo`, `redo` |
-| 永続化 | `loadFromJson`, `exportToJson` |
+`CanvasNotifier`（`providers/canvas_provider.dart`）は薄いシェルで、実装は 7 つの mixin に分離されている。
+
+| カテゴリ | mixin（ファイル） | メソッド |
+| --- | --- | --- |
+| オブジェクト（基本） | `CanvasObjectCore`（`canvas_object_core.dart`） | `addObject`, `editObject`, `bringToFront`, `deleteSelected`, `deleteAllObjects`, `duplicateSelected`, `duplicateObject`, `deleteObject`, `updateLastShape` |
+| オブジェクト（ドラッグ） | `CanvasObjectDrag`（`canvas_object_drag.dart`） | `updatePosition`, `endDrag`, `setPosition`, `cancelDrag`, `resetDraft`, `resetGroupDrafts`, `clearLocalDrafts` |
+| 選択 | `CanvasObjectSelection`（`canvas_object_selection.dart`） | `selectObject`, `toggleSelect`, `selectedCount`, `selectAll`, `clearSelection` |
+| 整列 | `CanvasObjectAlign`（`canvas_object_align.dart`） | `alignSelectedToStep`, `alignSelected`（+ `AlignMode` 列挙型） |
+| 接続線 | `CanvasConnectionOps`（`canvas_connection_ops.dart`） | `addConnection`, `connectSelected`, `updateConnection`, `deleteConnection` |
+| グループ | `CanvasGroupOps`（`canvas_group_ops.dart`） | `createGroup`, `addToGroup`, `updateGroup`, `deleteGroup`, `moveGroup`, `endGroupDrag` |
+| Undo/Redo | `CanvasHistoryOps`（`canvas_history_ops.dart`） | `undo`, `redo` |
+| 永続化 | `CanvasHistoryOps`（`canvas_history_ops.dart`） | `loadFromJson`, `exportToJson`, `makeNewNote` |
+
+- **ID 生成**: `providers/canvas_id.dart` の `generateId` / `generateConnectionId` / `generateGroupId`。
 
 ### 4.3 ドラッグ中の状態管理
 
@@ -206,6 +212,7 @@ BackgroundConfig
 | キャンバス状態（エクスポート用） | JSON ファイル | ユーザー選択のファイル（`file_picker`） |
 | キャンバス名 | `hive_ce`（自動） | アプリ内部の永続化領域（`memoma3_canvas` box） |
 | 背景ガイド設定 | `shared_preferences` | アプリ内部の永続化領域 |
+| アクションバーの表示ページ（左 / 右） | `shared_preferences` | アプリ内部の永続化領域（`memoma3.action_bar_page`） |
 
 ### 6.1 自動永続化（`hive_ce`）
 

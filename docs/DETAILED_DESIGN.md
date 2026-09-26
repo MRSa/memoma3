@@ -71,16 +71,20 @@
 ### 2.2 `CanvasNotifier`（`providers/canvas_provider.dart`）
 
 - **役割**: キャンバス状態を管理する `Notifier`。オブジェクト・接続線・グループの CRUD、選択、整列、Undo/Redo、ドラッグ中のローカル状態を担当。
-- **ドラッグ関連フィールド**: `localDraftPositions`, `dragStartPositions`, `dragStartCanvas`, `lastAddedId`, `lastShape`。
-- **主要メソッド**:
-  - **オブジェクト**: `addObject`, `updatePosition`, `endDrag`, `setPosition`, `cancelDrag`, `resetDraft`, `clearLocalDrafts`, `bringToFront`, `editObject`, `deleteObject`, `deleteSelected`, `deleteAllObjects`, `makeNewNote`, `updateLastShape`, `duplicateSelected`（選択分複製、右下 20px ずらし・接続線/グループ非引き継ぎ）, `duplicateObject`（単一オブジェクト複製、一覧行用）。
-  - **選択**: `selectObject`, `toggleSelect`, `selectAll`, `clearSelection`, `_setAllSelected`。
-  - **整列**: `alignSelectedToStep`, `alignSelected`。
-  - **接続線**: `addConnection`, `connectSelected`, `updateConnection`, `deleteConnection`。
-  - **グループ**: `createGroup`, `addToGroup`, `updateGroup`, `deleteGroup`, `moveGroup`, `endGroupDrag`, `resetGroupDrafts`。
-  - **Undo/Redo**: `undo`, `redo`。
-  - **永続化**: `loadFromJson`, `exportToJson`, `_deduplicateConnectionIds`, `_deduplicateGroupIds`。
-  - **内部**: `_snap`（位置の丸め）。
+- **構成**: 実装は 7 つの mixin に分離されている（`canvas_provider.dart` 自体は薄いシェル）。
+
+| mixin | ファイル | 担当 |
+| --- | --- | --- |
+| `CanvasObjectCore` | `providers/canvas_object_core.dart` | 共有フィールド（`localDraftPositions`, `dragStartPositions`, `dragStartCanvas`, `lastAddedId`, `lastShape`）と基本 CRUD（`addObject`, `editObject`, `bringToFront`, `deleteSelected`, `duplicateSelected`（選択分複製、右下 20px ずらし・接続線/グループ非引き継ぎ）, `duplicateObject`（単一オブジェクト複製、一覧行用）, `deleteObject`, `deleteAllObjects`, `updateLastShape`） |
+| `CanvasObjectDrag` | `providers/canvas_object_drag.dart` | ドラッグ操作（`updatePosition`, `endDrag`, `setPosition`, `cancelDrag`, `resetDraft`, `resetGroupDrafts`, `clearLocalDrafts`） |
+| `CanvasObjectSelection` | `providers/canvas_object_selection.dart` | 選択操作（`selectObject`, `toggleSelect`, `selectedCount`, `selectAll`, `clearSelection`） |
+| `CanvasObjectAlign` | `providers/canvas_object_align.dart` | 整列（`alignSelectedToStep`, `alignSelected`）と `AlignMode` 列挙型 |
+| `CanvasConnectionOps` | `providers/canvas_connection_ops.dart` | 接続線（`addConnection`, `connectSelected`, `updateConnection`, `deleteConnection`） |
+| `CanvasGroupOps` | `providers/canvas_group_ops.dart` | グループ（`createGroup`, `addToGroup`, `updateGroup`, `deleteGroup`, `moveGroup`, `endGroupDrag`） |
+| `CanvasHistoryOps` | `providers/canvas_history_ops.dart` | 履歴・データ（`undo`, `redo`, `loadFromJson`, `exportToJson`, `makeNewNote`） |
+
+- **ID 生成**: `providers/canvas_id.dart` の `generateId` / `generateConnectionId` / `generateGroupId`（マイクロ秒 + カウンタで一意性を保証）。
+- **内部ヘルパー**: `_snap`（位置の丸め、`CanvasObjectAlign` 内）、`_setAllSelected`（`CanvasObjectSelection` 内）、`_deduplicateConnectionIds` / `_deduplicateGroupIds`（`CanvasHistoryOps` 内）。
 
 ### 2.3 `CanvasNameNotifier`（`providers/canvas_provider.dart`）
 
@@ -92,10 +96,11 @@
 - **役割**: 背景ガイド設定を管理する `Notifier`。`shared_preferences` への永続化と復元を担当。
 - **状態**: `BackgroundConfig`。
 
-### 2.5 `AlignMode`（`providers/canvas_provider.dart`）
+### 2.5 `AlignMode`（`providers/canvas_object_align.dart`）
 
 - **役割**: 整列モードを列挙。
 - **値**: `left`, `right`, `top`, `bottom`, `distributeHorizontal`, `distributeVertical`。
+- **備考**: `canvas_provider.dart` が `export ... show AlignMode;` により再エクスポートしているため、従来どおり `canvas_provider.dart` 経由で参照できる。
 
 ## 3. services（I/O・永続化層）
 
@@ -127,29 +132,47 @@
 - **接続**: `MainCanvasScreen` が `ref.listen(canvasNotifierProvider, ...)` で状態変更を検知し `scheduleSaveState` を呼ぶ。`didChangeAppLifecycleState` で `paused` / `hidden` 時に `flush()`。起動時 `initState` で `loadName` / `loadState` を復元。
 - **初期化**: `main.dart` で `Hive.init`（Web はパス不要、それ以外は `path_provider` のアプリケーションサポートディレクトリ）。
 
+### 3.5 `ActionBarPagePersistenceService`（`services/action_bar_page_persistence_service.dart`）
+
+- **役割**: 幅が狭いときの `TopActionBar` の 2 ページ表示で、現在表示中のページ（左 / 右）を `shared_preferences` に記憶する。
+- **キー**: `memoma3.action_bar_page`。
+- **主要メソッド**: `load()` / `save()`。
+
 ## 4. views（画面層）
 
 ### 4.1 `MainCanvasScreen`（`views/main_canvas_screen.dart`）
 
 - **役割**: アプリのメイン画面。キャンバスの描画、パン・ズーム、オブジェクト操作、接続モード、整列、エクスポート、背景設定の入口。
 - **定数**: `kCanvasSize = Size(50000, 50000)`。
+- **構成**: state クラスは 2 つの mixin に分離されている（`main_canvas_screen.dart` 自体は薄いシェル）。
+  - `MainCanvasState`（`views/main_canvas/main_canvas_state.dart`）: フィールド・ライフサイクル・座標変換・モード切替・グループ枠・接続線ロジック。
+  - `MainCanvasUi`（`views/main_canvas/main_canvas_ui.dart`）: `build`（Scaffold / TopActionBar / キャンバス描画）。
 - **描画順序（Z 順）**: 背景色 → 背景画像 → グリッド → グループ枠 → 接続線 → オブジェクト。
-- **内部ウィジェット**: `_ZoomControlPanel`（ズーム操作パネル）。
+- **関連ウィジェット**（`views/main_canvas/`）: `ZoomControlPanel`（ズーム操作パネル）、`BuildHintCard`（ビルド情報カード）、`ConnectionMenuPositioner`（接続線メニューの位置調整）、`showConnectionMenuDialog`（接続線コンテキストメニュー表示）。
 
 ### 4.2 `ObjectListScreen`（`views/object_list_screen.dart`）
 
 - **役割**: オブジェクト一覧画面。全オブジェクトの属性を表示・編集し、CSV エクスポートを提供。
+- **構成**: state クラスは 2 つの mixin に分離され、ロジックは `ObjectListController`（`views/object_list/object_list_controller.dart`）に集約されている。
+  - `ObjectListEditActions`（`views/object_list/object_list_edit_actions.dart`）: 編集・ダイアログ系メソッド。
+  - `ObjectListTableUi`（`views/object_list/object_list_table_ui.dart`）: テーブル・フィルタバーの UI 構築。
+  - `ObjectListController`: フィルタ / ソート / CSV 生成（`filteredAndSorted`, `buildCsv`, `colorToHex` 等）。
 - **列**: No. / 名称（左固定）+ 説明 / 詳細 / グループ / 形状 / 強調 / 色 / 接続(from/to) / X / Y / サイズ / 中心 / 複製 / 削除（右スクロール）。
 - **フィルタ**: 名称（テキスト）、形状（複数選択）、強調（複数選択）。
 - **ソート**: 列ヘッダクリックで昇降順切替（サイズ列もソート対象）。
 - **複製**: 行の「複製」ボタンで `duplicateObject(id)` を呼び、そのオブジェクトを複製（右下 20px ずらし）。
-- **CSV**: `_buildCsv`（UTF-8 BOM 付き、`_csvEscape` でエスケープ、`_colorToHex` で #RRGGBB、サイズ列は `1.0倍` 形式）。
+- **CSV**: `ObjectListController.buildCsv`（UTF-8 BOM 付き、`_csvEscape` でエスケープ、`colorToHex` で #RRGGBB、サイズ列は `1.0倍` 形式）。
+- **関連ウィジェット**（`views/object_list/`）: `EditableLabelCell`（セル内編集）、`LinkTextCell`（URL リンク）、`SortHeader`（ソートヘッダ）、`MultiSelectDropdown`（複数選択ドロップダウン）。
 
 ## 5. widgets（部品層）
 
 ### 5.1 `TopActionBar`（`widgets/top_action_bar.dart`）
 
 - **役割**: 上部アクションバー。操作カテゴリごとに区切り線で分類し、以下の順で配置: 読み込み / 保存 / 画像・PDF エクスポート | Undo / Redo | オブジェクト数 / 操作数 | キャンバス名 | 整列 / 接続 / 編集 | 削除 / 全削除 | グループ化 / 接続モード / 選択モード / 全選択 | オブジェクト一覧 / 背景ガイド設定。
+- **構成**: 幅が広い場合は 1 行表示、狭い場合は 2 ページ表示（`kActionBarMinWidth = 1200.0` を基準に切替）。
+  - `TopActionBarLeft`（`widgets/top_action_bar_left.dart`）: 読み込み / 保存 / Undo / Redo / 状態表示 / キャンバス名。
+  - `TopActionBarRight`（`widgets/top_action_bar_right.dart`）: 整列 / 接続 / 編集 / 削除 / モード切替 / 一覧 / 背景設定。
+  - ページ表示の左右位置は `ActionBarPagePersistenceService`（`services/action_bar_page_persistence_service.dart`）で記憶される。
 - **選択モード**: 「選択モード」ボタンでキーボードのない環境向けの複数選択モードを切替。「全選択」ボタンは常時表示され、選択モード中かつオブジェクトがあるときのみ有効。
 
 ### 5.2 `NoteObjectWidget`（`widgets/note_object_widget.dart`）
