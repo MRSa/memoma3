@@ -41,17 +41,44 @@ memoma3/
 │   │   └── background_config.dart# BackgroundConfig, GridType
 │   ├── providers/                # 状態・ロジック層
 │   │   ├── canvas_state.dart     # CanvasState
-│   │   └── canvas_provider.dart  # CanvasNotifier, CanvasNameNotifier, BackgroundConfigNotifier, AlignMode
+│   │   ├── canvas_provider.dart  # CanvasNotifier（シェル）, CanvasNameNotifier, BackgroundConfigNotifier
+│   │   ├── canvas_id.dart        # ID 生成ヘルパー
+│   │   ├── canvas_object_core.dart     # CanvasObjectCore（フィールド + 基本 CRUD）
+│   │   ├── canvas_object_drag.dart     # CanvasObjectDrag（ドラッグ操作）
+│   │   ├── canvas_object_selection.dart# CanvasObjectSelection（選択操作）
+│   │   ├── canvas_object_align.dart    # CanvasObjectAlign（整列）+ AlignMode
+│   │   ├── canvas_connection_ops.dart  # CanvasConnectionOps（接続線操作）
+│   │   ├── canvas_group_ops.dart       # CanvasGroupOps（グループ枠操作）
+│   │   └── canvas_history_ops.dart     # CanvasHistoryOps（Undo/Redo・JSON・生成）
 │   ├── services/                 # I/O・永続化層
 │   │   ├── storage_service.dart          # JSON 保存・読み込み
 │   │   ├── canvas_export_service.dart    # PNG / PDF エクスポート
 │   │   ├── background_persistence_service.dart # 背景設定の永続化
-│   │   └── canvas_persistence_service.dart # キャンバス状態・キャンバス名の自動永続化（hive_ce）
+│   │   ├── canvas_persistence_service.dart # キャンバス状態・キャンバス名の自動永続化（hive_ce）
+│   │   └── action_bar_page_persistence_service.dart # アクションバーのページ表示状態の永続化
 │   ├── views/                    # 画面層
-│   │   ├── main_canvas_screen.dart       # メインキャンバス画面
-│   │   ├── object_list_screen.dart       # オブジェクト一覧画面
+│   │   ├── main_canvas_screen.dart       # メインキャンバス画面（シェル）
+│   │   ├── main_canvas/                  # メインキャンバスの実装
+│   │   │   ├── main_canvas_state.dart    # MainCanvasState（ロジック mixin）
+│   │   │   ├── main_canvas_ui.dart       # MainCanvasUi（UI mixin）
+│   │   │   ├── zoom_control_panel.dart   # ズーム操作パネル
+│   │   │   ├── build_hint_card.dart      # ビルド情報カード
+│   │   │   ├── connection_menu_dialog.dart     # 接続線メニュー表示
+│   │   │   └── connection_menu_positioner.dart # 接続線メニューの位置調整
+│   │   ├── object_list_screen.dart       # オブジェクト一覧画面（シェル）
+│   │   ├── object_list/                  # オブジェクト一覧の実装
+│   │   │   ├── object_list_controller.dart     # フィルタ / ソート / CSV 生成
+│   │   │   ├── object_list_edit_actions.dart   # 編集・ダイアログ系 mixin
+│   │   │   ├── object_list_table_ui.dart       # テーブル UI mixin
+│   │   │   ├── object_list_ui.dart             # 列定義・定数
+│   │   │   ├── object_list_editable_label_cell.dart # セル内編集
+│   │   │   ├── object_list_link_text_cell.dart     # URL リンクセル
+│   │   │   ├── object_list_sort_header.dart        # ソートヘッダ
+│   │   │   └── object_list_multi_select_dropdown.dart # 複数選択ドロップダウン
 │   │   └── widgets/              # 部品層
 │   │       ├── top_action_bar.dart
+│   │       ├── top_action_bar_left.dart
+│   │       ├── top_action_bar_right.dart
 │   │       ├── note_object_widget.dart
 │   │       ├── note_shape_painter.dart
 │   │       ├── object_edit_dialog.dart

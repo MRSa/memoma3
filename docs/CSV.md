@@ -7,7 +7,7 @@
 - **形式**: RFC 4180 準拠の CSV（カンマ区切り）。
 - **エンコーディング**: UTF-8（**BOM 付き**）。Excel で正しく開けるよう、ファイル先頭に `\uFEFF`（UTF-8 BOM）を付与します。
 - **改行**: 各行の末尾に改行（`writeln`）を付与します。
-- **出力元**: `lib/views/object_list_screen.dart` の `_buildCsv`。
+- **出力元**: `lib/views/object_list/object_list_controller.dart` の `ObjectListController.buildCsv`（`lib/views/object_list_screen.dart` から呼び出し）。
 - **保存**: `StorageService.saveCanvas`（`file_picker`）で、拡張子 `csv` のファイルとして保存します。ファイル名はキャンバス名を使用します。
 
 ## 2. 列定義
@@ -39,7 +39,7 @@
 
 ## 3. エスケープ規則
 
-`_csvEscape` により、以下のいずれかの文字を含むフィールドは、ダブルクォート（`"`）で囲まれ、内部のダブルクォートは 2 つ（`""`）にエスケープされます。
+`ObjectListController._csvEscape` により、以下のいずれかの文字を含むフィールドは、ダブルクォート（`"`）で囲まれ、内部のダブルクォートは 2 つ（`""`）にエスケープされます。
 
 - カンマ（`,`）
 - ダブルクォート（`"`）
@@ -53,7 +53,7 @@
 
 ## 4. 色の形式
 
-`_colorToHex` により、`Color` を `#RRGGBB` 形式（大文字 16 進）に変換します。アルファ値は含めません。
+`ObjectListController.colorToHex` により、`Color` を `#RRGGBB` 形式（大文字 16 進）に変換します。アルファ値は含めません。
 
 ```text
 例:  #FF5733, #000000, #FFFFFF

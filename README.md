@@ -271,15 +271,42 @@ lib/
 │   ├── storage_service.dart              # JSON ファイルの保存・読み込み
 │   ├── canvas_export_service.dart        # PNG / PDF エクスポート
 │   ├── background_persistence_service.dart # 背景設定の永続化
-│   └── canvas_persistence_service.dart   # キャンバス状態・キャンバス名の自動永続化（hive_ce）
+│   ├── canvas_persistence_service.dart   # キャンバス状態・キャンバス名の自動永続化（hive_ce）
+│   └── action_bar_page_persistence_service.dart # アクションバーのページ表示状態の永続化
 ├── providers/
-│   ├── canvas_provider.dart       # CanvasNotifier, CanvasNameNotifier, BackgroundConfigNotifier, AlignMode
-│   └── canvas_state.dart          # キャンバス全体の immutable な状態モデル
+│   ├── canvas_state.dart          # キャンバス全体の immutable な状態モデル
+│   ├── canvas_provider.dart       # CanvasNotifier（シェル）, CanvasNameNotifier, BackgroundConfigNotifier
+│   ├── canvas_id.dart             # ID 生成ヘルパー
+│   ├── canvas_object_core.dart    # CanvasObjectCore（フィールド + 基本 CRUD）
+│   ├── canvas_object_drag.dart    # CanvasObjectDrag（ドラッグ操作）
+│   ├── canvas_object_selection.dart # CanvasObjectSelection（選択操作）
+│   ├── canvas_object_align.dart   # CanvasObjectAlign（整列）+ AlignMode
+│   ├── canvas_connection_ops.dart # CanvasConnectionOps（接続線操作）
+│   ├── canvas_group_ops.dart      # CanvasGroupOps（グループ枠操作）
+│   └── canvas_history_ops.dart    # CanvasHistoryOps（Undo/Redo・JSON・生成）
 └── views/
-    ├── main_canvas_screen.dart    # InteractiveViewer を含むメイン画面
-    ├── object_list_screen.dart    # オブジェクト一覧画面（CSV エクスポート）
+    ├── main_canvas_screen.dart    # InteractiveViewer を含むメイン画面（シェル）
+    ├── main_canvas/               # メインキャンバスの実装
+    │   ├── main_canvas_state.dart     # MainCanvasState（ロジック mixin）
+    │   ├── main_canvas_ui.dart        # MainCanvasUi（UI mixin）
+    │   ├── zoom_control_panel.dart    # ズーム操作パネル
+    │   ├── build_hint_card.dart       # ビルド情報カード
+    │   ├── connection_menu_dialog.dart    # 接続線メニュー表示
+    │   └── connection_menu_positioner.dart # 接続線メニューの位置調整
+    ├── object_list_screen.dart    # オブジェクト一覧画面（シェル、CSV エクスポート）
+    ├── object_list/               # オブジェクト一覧の実装
+    │   ├── object_list_controller.dart    # フィルタ / ソート / CSV 生成
+    │   ├── object_list_edit_actions.dart  # 編集・ダイアログ系 mixin
+    │   ├── object_list_table_ui.dart      # テーブル UI mixin
+    │   ├── object_list_ui.dart            # 列定義・定数
+    │   ├── object_list_editable_label_cell.dart # セル内編集
+    │   ├── object_list_link_text_cell.dart      # URL リンクセル
+    │   ├── object_list_sort_header.dart         # ソートヘッダ
+    │   └── object_list_multi_select_dropdown.dart # 複数選択ドロップダウン
     └── widgets/
-        ├── top_action_bar.dart          # 上部ツールバー
+        ├── top_action_bar.dart          # 上部ツールバー（コンテナ）
+        ├── top_action_bar_left.dart     # 上部ツールバー左側（ファイル操作 / Undo / 状態表示）
+        ├── top_action_bar_right.dart    # 上部ツールバー右側（編集 / モード切替 / 一覧）
         ├── note_object_widget.dart      # 各オブジェクトの描画・ドラッグ操作
         ├── note_shape_painter.dart      # オブジェクト形状の描画 (CustomPainter)
         ├── object_edit_dialog.dart      # オブジェクト情報の編集ダイアログ
@@ -304,10 +331,12 @@ lib/
 | `services/canvas_export_service.dart` | `CanvasExportService` | キャンバスを PNG / PDF にエクスポート。 |
 | `services/background_persistence_service.dart` | `BackgroundPersistenceService` | 背景ガイド設定の `shared_preferences` への永続化・復元。 |
 | `services/canvas_persistence_service.dart` | `CanvasPersistenceService` | キャンバス状態・キャンバス名の `hive_ce` への自動・逐次永続化・復元（デバウンス付き）。 |
+| `services/action_bar_page_persistence_service.dart` | `ActionBarPagePersistenceService` | 幅が狭いときの `TopActionBar` の 2 ページ表示で、現在表示中のページ（左 / 右）を `shared_preferences` に記憶する。 |
 | `providers/canvas_state.dart` | `CanvasState` | オブジェクト・接続線・グループ・選択 ID・Undo/Redo 履歴スタック（最大 30 件）を保持する不変モデル。 |
-| `providers/canvas_provider.dart` | `CanvasNotifier` | オブジェクト・接続線・グループの CRUD、選択、整列、複製、Undo/Redo、JSON 復元/エクスポートを管理。最後に設定された形状を保持し、新規オブジェクトのデフォルト形状として使用する。 |
-| `views/main_canvas_screen.dart` | `MainCanvasScreen` | `InteractiveViewer` を用いたメイン画面。ダブルタップ/長押しでオブジェクト追加。左下にズーム制御パネルを配置。 |
-| `views/object_list_screen.dart` | `ObjectListScreen` | オブジェクト一覧画面。フィルタ・ソート・中心移動・複製・削除・CSV エクスポートを提供。 |
+| `providers/canvas_provider.dart` | `CanvasNotifier` | オブジェクト・接続線・グループの CRUD、選択、整列、複製、Undo/Redo、JSON 復元/エクスポートを管理。最後に設定された形状を保持し、新規オブジェクトのデフォルト形状として使用する。実装は 7 つの mixin（`canvas_object_core/drag/selection/align.dart`、`canvas_connection_ops.dart`、`canvas_group_ops.dart`、`canvas_history_ops.dart`）に分離。 |
+| `providers/canvas_id.dart` | `generateId` 等 | ID 生成ヘルパー（マイクロ秒 + カウンタで一意性を保証）。 |
+| `views/main_canvas_screen.dart` | `MainCanvasScreen` | `InteractiveViewer` を用いたメイン画面。ダブルタップ/長押しでオブジェクト追加。左下にズーム制御パネルを配置。ロジックは `main_canvas/main_canvas_state.dart`、UI は `main_canvas/main_canvas_ui.dart` に分離。 |
+| `views/object_list_screen.dart` | `ObjectListScreen` | オブジェクト一覧画面。フィルタ・ソート・中心移動・複製・削除・CSV エクスポートを提供。ロジックは `object_list/object_list_controller.dart`、編集系は `object_list/object_list_edit_actions.dart`、テーブル UI は `object_list/object_list_table_ui.dart` に分離。 |
 | `views/widgets/note_object_widget.dart` | `NoteObjectWidget` | 1 オブジェクトの描画とドラッグ操作。ズーム補正付き移動。接続モード時は接続先の検出用に使用。長押しで編集ダイアログを表示。選択モード時はタップで選択をトグル（複数選択）。 |
 | `views/widgets/note_shape_painter.dart` | `NoteShapePainter` | 形状（14 種）に応じた背景描画。選択時は四隅の枠線で強調。 |
 | `views/widgets/connection_painter.dart` | `ConnectionPainter` | 2 オブジェクト間を結ぶ接続線の描画。形状（6 種）と線種（4 種）・色に応じた描画。オブジェクトの境界間を結ぶパスを構築する。 |
@@ -317,7 +346,7 @@ lib/
 | `views/widgets/group_edit_dialog.dart` | `GroupEditDialog` | グループの名称・説明・枠線の色を編集するダイアログ。 |
 | `views/widgets/background_grid_painter.dart` | `BackgroundGridOverlay` | 背景グリッド（罫線/ドット）を描画するオーバーレイ。 |
 | `views/widgets/background_settings_dialog.dart` | `BackgroundSettingsDialog` | 背景ガイド（グリッド・背景色・背景画像）を設定するダイアログ。 |
-| `views/widgets/top_action_bar.dart` | `TopActionBar` | 操作カテゴリごとに区切り線で分類し、以下の順で配置: 読み込み/保存/画像・PDF () Undo/Redo () オブジェクト数/操作数 () キャンバス名 () 整列/接続/編集 () 削除/全削除 () グループ化/接続モード/選択モード/全選択 () オブジェクト一覧/背景ガイド設定。 |
+| `views/widgets/top_action_bar.dart` | `TopActionBar` | 操作カテゴリごとに区切り線で分類し、以下の順で配置: 読み込み/保存/画像・PDF () Undo/Redo () オブジェクト数/操作数 () キャンバス名 () 整列/接続/編集 () 削除/全削除 () グループ化/接続モード/選択モード/全選択 () オブジェクト一覧/背景ガイド設定。幅が狭い場合は 2 ページ表示に切替。左側は `top_action_bar_left.dart`、右側は `top_action_bar_right.dart` に分離。 |
 | `views/widgets/object_edit_dialog.dart` | `ObjectEditDialog` | 選択中のオブジェクトの形状・強調・ラベル・詳細・説明・色・ラベル色・説明色・サイズ（0.5〜4倍）・ラベル/説明の文字サイズ（1〜5段階）を編集するダイアログ。`MyCustomColorPicker` を使用。 |
 | `views/widgets/my_custom_color_picker.dart` | `MyCustomColorPicker` | `flex_color_picker` の `ColorPicker` をラップする共通カラーピッカー。カラーホイール・シェード選択・カラーコード・コピー＆ペースト・OK/キャンセルボタンを有効化。全色選択箇所で使用。 |
 
