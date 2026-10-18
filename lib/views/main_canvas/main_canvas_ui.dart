@@ -81,6 +81,11 @@ mixin MainCanvasUi on ConsumerState<MainCanvasScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(canvasNotifierProvider);
 
+    // Android の 3 ボタンナビゲーションなど、画面下端にシステム UI がある場合、
+    // Scaffold の body はナビゲーションバーの背後まで拡張される。
+    // 下部パネルがナビゲーションバーと重ならないよう、下端のインセットを取得する。
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
     // キャンバス状態が変更されるたびに、デバウンス付きで逐次永続化する。
     ref.listen<CanvasState>(
       canvasNotifierProvider,
@@ -391,7 +396,7 @@ mixin MainCanvasUi on ConsumerState<MainCanvasScreen> {
             ),
          Positioned(
             right: 12,
-            bottom: 12,
+            bottom: 12 + bottomInset,
             child: BuildHintCard(
               debugMode: debugMode,
               onTap: () => setState(() => debugMode = !debugMode),
@@ -404,7 +409,7 @@ mixin MainCanvasUi on ConsumerState<MainCanvasScreen> {
           ),
           Positioned(
             left: 12,
-            bottom: 12,
+            bottom: 12 + bottomInset,
             child: ZoomControlPanel(
               transformationController: transformationController,
             ),
